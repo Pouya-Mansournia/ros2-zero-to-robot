@@ -13,6 +13,7 @@ authors:
     given-names: "Pouya"
 repository-code: "https://github.com/Pouya-Mansournia/ros2-zero-to-robot"
 url: "https://pouya-mansournia.github.io/ros2-zero-to-robot/"
+doi: 10.5281/zenodo.21843441
 license: CC-BY-4.0
 version: 1.0.0
 date-released: "2026-08-07"

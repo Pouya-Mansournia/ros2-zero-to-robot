@@ -13,11 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="https://pouya-mansournia.github.io/ros2-zero-to-robot-fa/"><strong>Read the Book Online →</strong></a>
+  <a href="https://pouya-mansournia.github.io/ros2-zero-to-robot/"><strong>Read the Book Online →</strong></a>
   &nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="https://github.com/Pouya-Mansournia/warehouse-amr-ros2"><strong>Explore the Companion Robot →</strong></a>
   &nbsp;&nbsp;•&nbsp;&nbsp;
-  <a href="https://doi.org/10.5281/zenodo.21841070"><strong>DOI →</strong></a>
+  <a href="https://doi.org/10.5281/zenodo.21843441"><strong>DOI →</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.21843441"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.21843441.svg" alt="DOI"></a>
 </p>
 
 ---
@@ -97,36 +101,38 @@ Rather than introducing a new disconnected example in every chapter, each concep
 
 The project gradually develops through stages such as:
 
-```text
-Robot Model
-    ↓
-TF Tree
-    ↓
-URDF / Xacro
-    ↓
-RViz
-    ↓
-Gazebo
-    ↓
-ros2_control
-    ↓
-Odometry
-    ↓
-Sensors
-    ↓
-Sensor Fusion
-    ↓
-SLAM
-    ↓
-Localization
-    ↓
-Nav2
-    ↓
-Behavior Trees
-    ↓
-Real Hardware
-    ↓
-Deployment
+```mermaid
+flowchart TD
+    A[Robot Model] --> B[URDF / Xacro]
+    B --> C[TF Tree]
+    C --> D[RViz]
+    D --> E[Gazebo]
+    E --> F[ros2_control]
+    F --> G[Odometry]
+    G --> H[Sensors]
+    H --> I[Sensor Fusion]
+    I --> J[SLAM]
+    J --> K[Localization]
+    K --> L[Nav2]
+    L --> M[Behavior Trees]
+    M --> N[Real Hardware]
+    N --> O[Deployment]
+
+    style A fill:#3d4bf5,color:#fff,stroke:none
+    style B fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style C fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style D fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style E fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    style F fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    style G fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    style H fill:#fdf3e4,stroke:#c8862c,color:#211f1a
+    style I fill:#fdf3e4,stroke:#c8862c,color:#211f1a
+    style J fill:#fdf3e4,stroke:#c8862c,color:#211f1a
+    style K fill:#fdf3e4,stroke:#c8862c,color:#211f1a
+    style L fill:#f3ecff,stroke:#8b5cf6,color:#211f1a
+    style M fill:#f3ecff,stroke:#8b5cf6,color:#211f1a
+    style N fill:#fdeeec,stroke:#d64a3c,color:#211f1a
+    style O fill:#0e9e6e,color:#fff,stroke:none
 ```
 
 This structure is intended to show how ROS 2 components interact as an engineering system rather than as isolated tutorials.
@@ -147,7 +153,7 @@ The repository is designed to complement the concepts explained in the book and 
 
 The book is published as a lightweight static website and can be read directly through GitHub Pages:
 
-### [Read ROS 2: Zero to Robot →](https://pouya-mansournia.github.io/ros2-zero-to-robot-fa/)
+### [Read ROS 2: Zero to Robot →](https://pouya-mansournia.github.io/ros2-zero-to-robot/)
 
 You can also open `index.html` locally in any modern browser.
 
@@ -240,7 +246,7 @@ A machine-readable citation is available through:
 
 ### DOI
 
-[**10.5281/zenodo.21841070**](https://doi.org/10.5281/zenodo.21841070)
+[**10.5281/zenodo.21843441**](https://doi.org/10.5281/zenodo.21843441)
 
 ---
 
