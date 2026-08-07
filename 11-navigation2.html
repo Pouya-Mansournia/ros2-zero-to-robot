@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter Eleven — Navigation2: The Brain of ARCHO's Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/Dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter Eleven: Navigation2 — The Brain of ARCHO's Motion</h1>
+    <div class="subtitle">From "Where am I?" to "How do I get there?"</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 10 (SLAM)</div>
+      <div class="chip">Ongoing project: ARCHO robot</div>
+      <div class="chip">Tool: Navigation2 (Nav2)</div>
+      <div class="chip">Reading time: 130 to 150 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#brain"><span>11.1</span>Nav2: The Brain of a Mobile Robot</a>
+    <a href="#localization"><span>11.2</span>From a Saved Map to Live Position: Map Server and AMCL</a>
+    <a href="#footprint"><span>11.3</span>Footprint: ARCHO's Real Shape for Nav2</a>
+    <a href="#costmap"><span>11.4</span>Costmap: The Map of Danger</a>
+    <a href="#brains"><span>11.5</span>Two Brains: Global Planner and Local Controller</a>
+    <a href="#config"><span>11.6</span>Full Configuration of the Planner and Controller</a>
+    <a href="#launch"><span>11.7</span>Full Launch and ARCHO's First Trip</a>
+    <a href="#debug"><span>11.8</span>Why the Robot Won't Reach Its Destination</a>
+    <a href="#summary"><span>11.9</span>Summary, Glossary, and Exercises</a>
+  </div>
+
+  <section id="brain">
+    <h2><span class="num">11.1</span>Nav2: The Brain of a Mobile Robot</h2>
+    <p>
+      In the previous chapter, ARCHO learned how to build a map of the warehouse. Now the next question is: given that map, how does
+      ARCHO decide on its own where to go, how to avoid obstacles, and how to reach its destination? This is exactly what
+      <strong>Navigation2 (Nav2)</strong> does.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 If MoveIt Was the Arm's Brain, Nav2 Is the Motion Brain</div>
+      <p>
+        In earlier chapters we saw how ros2_control sends raw commands to the motors. Nav2 sits one layer above that:
+        instead of saying "turn the left motor by 1.2 radians," it says "you need to go to shelf 24." This is the
+        technology behind nearly every AMR, warehouse robot, hospital robot, and delivery robot today.
+      </p>
+    </div>
+    <p>
+      Before we dive into the details, we need to separate four questions — each belongs to a different part of Nav2:
+    </p>
+    <table>
+      <tr><th>Question</th><th>Answered by</th></tr>
+      <tr><td>Where am I right now?</td><td>Localization (AMCL)</td></tr>
+      <tr><td>What does the world look like?</td><td>Map (Map Server)</td></tr>
+      <tr><td>Where is it better and safer to go?</td><td>Costmap</td></tr>
+      <tr><td>How do I get from here to my destination?</td><td>Global Planner + Local Controller</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="localization">
+    <h2><span class="num">11.2</span>From a Saved Map to Live Position: Map Server and AMCL</h2>
+    <p>On day one, ARCHO built a map using SLAM Toolbox. From day two onward, there's no need to rebuild the map:</p>
+    <div class="mermaid">
+flowchart LR
+    A["Saved Map<br/>warehouse.pgm/.yaml"] --> B["Map Server"]
+    B --> C["AMCL"]
+    D["LaserScan<br/>/scan"] --> C
+    C --> E["Transform: map → odom"]
+    style B fill:#eef0ff,stroke:#3d4bf5
+    style C fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 What Is AMCL</div>
+      <p>
+        Adaptive Monte Carlo Localization — using live LiDAR data and comparing it against the saved map,
+        it answers the question: "Where exactly on this map is the robot standing?" Unlike SLAM Toolbox, AMCL does not
+        build a map — it only finds the position on a map you already have.
+      </p>
+    </div>
+    <p>Full Nav2 installation:</p>
+    <pre><code>sudo apt install \
+  ros-jazzy-navigation2 \
+  ros-jazzy-nav2-bringup</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ One Important General Rule</div>
+      <p>
+        Navigation2 needs four things to be correctly set up for a custom robot like ARCHO: a valid Map, TF,
+        Odometry, and LaserScan, along with an accurate Footprint. Nav2 cannot magically fix errors from
+        lower layers (chapters 5, 8, and 9) — it works on top of whatever foundation you have built.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="footprint">
+    <h2><span class="num">11.3</span>Footprint: ARCHO's Real Shape for Nav2</h2>
+    <p>Nav2 needs to know ARCHO's exact shape and size so it can predict collisions.</p>
+    <pre><code># Rectangular model — more precise view
+footprint: "[[0.25, 0.18], [0.25, -0.18], [-0.25, -0.18], [-0.25, 0.18]]"
+
+# or a simple circular model
+robot_radius: 0.30</code></pre>
+    <table>
+      <tr><th>Error</th><th>Consequence</th></tr>
+      <tr><td>Footprint smaller than the real robot</td><td>Actual collision with a shelf or wall</td></tr>
+      <tr><td>Footprint larger than the real robot</td><td>ARCHO cannot pass through doors and narrow aisles</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="costmap">
+    <h2><span class="num">11.4</span>Costmap: The Map of Danger</h2>
+    <p>
+      An ordinary map only says where a wall is. A Costmap is a smarter layer on top of that map, saying where it is
+      "expensive" or dangerous to go — even in places where there is no wall yet but it is close to one.
+    </p>
+    <p>Nav2 has two separate Costmaps, each for a different purpose:</p>
+    <table>
+      <tr><th></th><th>Global Costmap</th><th>Local Costmap</th></tr>
+      <tr><td>Reference frame</td><td><code>map</code></td><td><code>odom</code></td></tr>
+      <tr><td>Coverage</td><td>The entire map</td><td>A small window around the robot (e.g. 4×4 meters)</td></tr>
+      <tr><td>Update rate</td><td>Slow (1-2 Hz)</td><td>Fast (5-10 Hz)</td></tr>
+      <tr><td>Use</td><td>Overall path planning</td><td>Instant reaction to nearby obstacles</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Why the Local Costmap Is in the odom Frame, Not map</div>
+      <p>
+        The Local Controller needs smooth, continuous motion. The <code>map</code> frame may jump slightly every time
+        AMCL performs a correction; but the <code>odom</code> frame is always continuous and jump-free (remember,
+        chapter 5). For moment-to-moment control, continuity matters more than absolute accuracy.
+      </p>
+    </div>
+    <pre><code># global_costmap.yaml
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      global_frame: map
+      robot_base_frame: base_link
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      resolution: 0.05
+      track_unknown_space: true
+      plugins:
+        - static_layer
+        - obstacle_layer
+        - inflation_layer
+
+# local_costmap.yaml
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 4.0
+      height: 4.0
+      resolution: 0.05
+      update_frequency: 10.0
+      publish_frequency: 5.0</code></pre>
+    <h3>Costmap Layers</h3>
+    <pre><code># Obstacle Layer — adds obstacles from LiDAR
+obstacle_layer:
+  plugin: nav2_costmap_2d::ObstacleLayer
+  observation_sources: scan
+  scan:
+    topic: /scan
+    data_type: LaserScan
+    clearing: true
+    marking: true
+    max_obstacle_height: 2.0
+    obstacle_max_range: 3.5
+    raytrace_max_range: 4.0
+
+# Inflation Layer — draws a safety margin around obstacles
+inflation_layer:
+  plugin: nav2_costmap_2d::InflationLayer
+  inflation_radius: 0.45
+  cost_scaling_factor: 4.0</code></pre>
+    <table>
+      <tr><th>Concept</th><th>Meaning</th></tr>
+      <tr><td><code>marking</code></td><td>When LiDAR sees an obstacle, record it on the Costmap</td></tr>
+      <tr><td><code>clearing</code></td><td>If a space that was previously occupied is now seen as free, clear it</td></tr>
+      <tr><td><code>inflation_radius</code></td><td>The radius of the safety margin around each obstacle</td></tr>
+    </table>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Incorrect Inflation Radius Settings</div>
+      <p>
+        If <code>inflation_radius</code> is too small, ARCHO hugs walls and shelves and the collision risk goes up.
+        If it's too large, narrow warehouse aisles appear entirely "closed" and the Planner can't find a path
+        through them — even if passing through them is practically possible.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="brains">
+    <h2><span class="num">11.5</span>Two Brains: Global Planner and Local Controller</h2>
+    <p>A real-life example: when you go to the airport, you make two completely different kinds of decisions.</p>
+    <table>
+      <tr><th></th><th>Overall Trip Plan</th><th>Moment-to-Moment Driving Decision</th></tr>
+      <tr><td>Example</td><td>Home → highway → exit 5 → airport</td><td>A slight turn of the wheel, braking, going around a bicycle</td></tr>
+      <tr><td>In Nav2</td><td>Global Planner</td><td>Local Controller</td></tr>
+    </table>
+    <div class="mermaid">
+flowchart TB
+    A["Goal"] --> B["Global Planner"]
+    B --> C["Global Path"]
+    C --> D["Local Controller"]
+    E["Localization + Costmap"] --> B
+    E --> D
+    D --> F["cmd_vel"]
+    F --> G["ros2_control"]
+    G --> H["Wheel Motors"]
+    style B fill:#eef0ff,stroke:#3d4bf5
+    style D fill:#f4effe,stroke:#8b5cf6
+    </div>
+    <h3>Global Planner</h3>
+    <p>
+      Its job is to find the best overall path from the starting point to the destination — regardless of how many
+      degrees the steering needs to turn. Its input is Map + Costmap + Goal, and its output is just a Path.
+    </p>
+    <table>
+      <tr><th>Planner Plugin</th><th>Feature</th></tr>
+      <tr><td>NavFn</td><td>Simple and fast, based on basic graph search</td></tr>
+      <tr><td>Smac Planner</td><td>Supports A* and Hybrid A*, better suited for non-circular robots</td></tr>
+      <tr><td>Theta*</td><td>Smoother paths with fewer turns</td></tr>
+    </table>
+    <h3>Local Controller</h3>
+    <p>
+      The Planner only gives an overall path; it doesn't say how many radians per second the left motor should turn.
+      That's the job of the Local Controller — which makes a decision every few milliseconds (e.g. 20-50 times per second).
+    </p>
+    <table>
+      <tr><th>Controller</th><th>Core Idea</th></tr>
+      <tr><td>Pure Pursuit</td><td>Instead of the whole path, it only looks at a point a few meters ahead — just like driving, where you don't stare at your front bumper</td></tr>
+      <tr><td>DWB (Dynamic Window Approach)</td><td>Tries dozens of combinations of linear and angular velocity and picks the best one</td></tr>
+      <tr><td>MPPI (Model Predictive Path Integral)</td><td>Simulates the future: "If I give this command, where will I be in 2 seconds?" and picks the best option among hundreds of possibilities</td></tr>
+    </table>
+    <div class="box idea">
+      <div class="box-title">🧠 Why the Planner Doesn't Always Run but the Controller Is Almost Always Active</div>
+      <p>
+        If the Planner recomputed a 200-meter path every 20 milliseconds, the robot's processor would be crippled. So
+        the Planner only runs when needed: a new destination, a blocked path, or a large obstacle. But the Controller
+        must be constantly active because the robot is moving at every moment — a worker walking past ARCHO doesn't
+        require recomputing the overall path, just a small instant correction. But if a forklift blocks the entire
+        aisle, the Controller can no longer do anything on its own and asks the Planner for help.
+      </p>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 A Real Warehouse Scenario</div>
+      <p>
+        The warehouse management system tells ARCHO "go to shelf 24." The Planner designs the overall path and ARCHO
+        starts moving. A worker walks past in front of it — the Local Controller slows down and slightly adjusts the
+        path, without the Planner even being notified. Moments later a forklift blocks the entire aisle — this time
+        a minor correction isn't enough, so the Controller asks the Planner for a completely new path through a
+        different aisle.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="config">
+    <h2><span class="num">11.6</span>Full Configuration of the Planner and Controller for ARCHO</h2>
+    <pre><code># planner_server.yaml
+planner_server:
+  ros__parameters:
+    planner_plugins:
+      - GridBased
+    GridBased:
+      plugin: nav2_navfn_planner::NavfnPlanner
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+# controller_server.yaml
+controller_server:
+  ros__parameters:
+    controller_frequency: 20.0
+    controller_plugins:
+      - FollowPath
+    FollowPath:
+      plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+      desired_linear_vel: 0.4
+      lookahead_dist: 0.6
+      min_lookahead_dist: 0.3
+      max_lookahead_dist: 0.9
+      use_velocity_scaled_lookahead_dist: true
+      use_collision_detection: true</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="launch">
+    <h2><span class="num">11.7</span>Full Launch and ARCHO's First Trip</h2>
+    <p>The startup order matters the first time:</p>
+    <table>
+      <tr><th>Order</th><th>What Gets Turned On</th></tr>
+      <tr><td>1</td><td>Gazebo (Chapter 7)</td></tr>
+      <tr><td>2</td><td>Robot + Controllers (Chapter 8)</td></tr>
+      <tr><td>3</td><td>Map Server</td></tr>
+      <tr><td>4</td><td>AMCL</td></tr>
+      <tr><td>5</td><td>Nav2 (Planner + Controller + Behavior Tree)</td></tr>
+      <tr><td>6</td><td>RViz</td></tr>
+    </table>
+    <p>In RViz:</p>
+    <ol>
+      <li>Click <strong>2D Pose Estimate</strong> and set ARCHO's initial position.</li>
+      <li>Wait for the AMCL particles to converge (i.e. all of them roughly point to a single spot).</li>
+      <li>Click <strong>Nav2 Goal</strong> and set the destination.</li>
+    </ol>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#f66;"></div>
+        <div class="term-dot" style="background:#fc5;"></div>
+        <div class="term-dot" style="background:#6c6;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 lifecycle nodes
+<span class="term-out">/map_server
+/amcl
+/planner_server
+/controller_server
+/bt_navigator</span>
+<span class="term-prompt">dev@archo:~$</span> ros2 run tf2_ros tf2_echo map base_link
+<span class="term-out">Translation: [4.821, 2.103, 0.000]
+Rotation: in Quaternion [0.0, 0.0, 0.021, 0.999]</span>
+      </div>
+    </div>
+    <p>For a full system check:</p>
+    <pre><code>ros2 topic list
+ros2 node list
+ros2 lifecycle nodes
+ros2 action list
+ros2 control list_controllers</code></pre>
+    <div class="figure">
+      <svg viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect width="760" height="400" fill="#181a2e"/>
+        <rect x="12" y="12" width="736" height="376" rx="10" fill="#20223a" stroke="#33375a"/>
+        <text x="30" y="38" fill="#d8dcff" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">RViz2 — Nav2 Goal in the ARCHO Warehouse</text>
+        <rect x="30" y="55" width="700" height="320" fill="#12142b" stroke="#33375a"/>
+        <g stroke="#2a2e4d" stroke-width="1">
+          <line x1="30" y1="105" x2="730" y2="105"/><line x1="30" y1="155" x2="730" y2="155"/>
+          <line x1="30" y1="205" x2="730" y2="205"/><line x1="30" y1="255" x2="730" y2="255"/>
+          <line x1="30" y1="305" x2="730" y2="305"/><line x1="30" y1="355" x2="730" y2="355"/>
+          <line x1="130" y1="55" x2="130" y2="375"/><line x1="230" y1="55" x2="230" y2="375"/>
+          <line x1="330" y1="55" x2="330" y2="375"/><line x1="430" y1="55" x2="430" y2="375"/>
+          <line x1="530" y1="55" x2="530" y2="375"/><line x1="630" y1="55" x2="630" y2="375"/>
+        </g>
+        <rect x="130" y="105" width="18" height="200" fill="#3d4bf5" opacity="0.35"/>
+        <rect x="480" y="105" width="18" height="150" fill="#3d4bf5" opacity="0.35"/>
+        <rect x="620" y="200" width="18" height="120" fill="#3d4bf5" opacity="0.35"/>
+        <circle cx="180" cy="330" r="10" fill="#8b5cf6"/>
+        <path d="M 180 330 Q 350 240 460 150 Q 560 190 660 230" stroke="#0e9e6e" stroke-width="3" fill="none" stroke-dasharray="6,4"/>
+        <circle cx="660" cy="230" r="9" fill="#c8862c"/>
+        <text x="660" y="212" fill="#c8862c" font-family="JetBrains Mono, monospace" font-size="11">Goal: Shelf 24</text>
+        <text x="150" y="325" fill="#8b5cf6" font-family="JetBrains Mono, monospace" font-size="11">ARCHO</text>
+        <g stroke="#7ee7c7" stroke-width="1" opacity="0.5">
+          <line x1="180" y1="330" x2="140" y2="290"/><line x1="180" y1="330" x2="150" y2="360"/>
+          <line x1="180" y1="330" x2="210" y2="300"/><line x1="180" y1="330" x2="220" y2="355"/>
+        </g>
+        <text x="45" y="40" fill="#7a7568" font-size="10" font-family="JetBrains Mono, monospace">Fixed Frame: map</text>
+      </svg>
+      <figcaption>ARCHO's planned path (green dashed line) from its current position to the Nav2 Goal, avoiding two shelves (dark purple).</figcaption>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="debug">
+    <h2><span class="num">11.8</span>Why the Robot Won't Reach Its Destination</h2>
+    <h3>Goal Accepted but No Movement</h3>
+    <ul>
+      <li>Is the Controller active?</li>
+      <li>Is cmd_vel actually being produced?</li>
+      <li>Does the controller topic match the Nav2 configuration?</li>
+      <li>Is a Velocity Smoother or an extra bridge needed?</li>
+    </ul>
+    <h3>No Path Is Generated at All</h3>
+    <ul>
+      <li>Is the Goal inside free space?</li>
+      <li>Is the Global Costmap complete?</li>
+      <li>Does the map → odom transform exist?</li>
+      <li>Is the Footprint not too large?</li>
+    </ul>
+    <h3>The Robot Spins in Place</h3>
+    <ul>
+      <li>Is the Yaw direction correctly defined?</li>
+      <li>Are the IMU axes aligned with the ENU standard?</li>
+      <li>Is the Laser frame not mounted backwards?</li>
+      <li>Was the Initial Pose correctly selected in RViz?</li>
+    </ul>
+    <h3>ARCHO Gets Stuck Next to an Obstacle</h3>
+    <ul>
+      <li>Is the Inflation Radius set appropriately?</li>
+      <li>Does the Local Costmap update fast enough?</li>
+      <li>Is Collision Checking enabled in the Controller?</li>
+    </ul>
+    <div class="figure">
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect width="760" height="320" fill="#fffefb"/>
+        <rect x="12" y="12" width="736" height="296" rx="14" fill="#fdf3e4" stroke="#f2ddb3"/>
+        <text x="380" y="48" fill="#c8862c" font-family="Inter, sans-serif" font-size="16" font-weight="700" text-anchor="middle">Final Nav2 Architecture</text>
+        <rect x="330" y="65" width="100" height="34" rx="8" fill="#eef0ff" stroke="#3d4bf5"/>
+        <text x="380" y="87" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">Goal</text>
+        <rect x="290" y="120" width="180" height="34" rx="8" fill="#f4effe" stroke="#8b5cf6"/>
+        <text x="380" y="142" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">Behavior Tree</text>
+        <rect x="150" y="175" width="170" height="34" rx="8" fill="#eef0ff" stroke="#3d4bf5"/>
+        <text x="235" y="197" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">Planner Server</text>
+        <rect x="440" y="175" width="170" height="34" rx="8" fill="#eafaf3" stroke="#0e9e6e"/>
+        <text x="525" y="197" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">Controller Server</text>
+        <rect x="440" y="230" width="170" height="34" rx="8" fill="#fdeeec" stroke="#d64a3c"/>
+        <text x="525" y="252" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">diff_drive_controller</text>
+        <line x1="380" y1="99" x2="380" y2="120" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="154" x2="235" y2="175" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="154" x2="525" y2="175" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="525" y1="209" x2="525" y2="230" stroke="#7a7568" stroke-width="1.5"/>
+        <text x="235" y="285" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7a7568">Map + AMCL → TF</text>
+        <text x="525" y="285" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7a7568">LiDAR → Costmaps</text>
+      </svg>
+      <figcaption>The final Nav2 architecture, bringing together all the components of this chapter in a single view.</figcaption>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 This Chapter's Golden Rule</div>
+      <p>
+        Navigation2 works well when the robot's TF, Odometry, Footprint, and Sensor Data have already been
+        correctly engineered; Nav2 cannot magically fix errors in the lower layers.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">11.9</span>Chapter Eleven Summary</h2>
+    <p>
+      ARCHO can now, in a warehouse it has already mapped, locate itself, plan an overall path, and deal with
+      moving obstacles moment by moment. But what we haven't seen yet is how these decisions — when to recompute
+      the path, when to wait, when to perform recovery — are actually coordinated. That's the topic of the next
+      chapter.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning Checkpoint</strong>
+      <ul>
+        <li>I can explain the difference between Map Server and AMCL.</li>
+        <li>I know why the Local Costmap is defined in the odom frame, not map.</li>
+        <li>I can explain Marking and Clearing in the Obstacle Layer.</li>
+        <li>I know why the Global Planner rarely runs but the Local Controller is almost always active.</li>
+        <li>I can name at least three common reasons "the robot doesn't move even though the Goal was accepted."</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the Main Project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has the <code>archo_navigation</code> package fully configured with Map Server, AMCL, dual Costmaps, Planner Server, and Controller Server — and for the first time, ARCHO can navigate the warehouse completely autonomously.</p>
+    </div>
+    <h3>What the Next Chapter Adds</h3>
+    <p>In Chapter Twelve we go into the heart of Nav2's decision-making: the <strong>Behavior Tree</strong> and <strong>Lifecycle Nodes</strong> — where you'll see that Nav2 isn't a linear program at all, but thinks more like the brain of a real robot.</p>
+    <h3>Chapter Eleven Glossary</h3>
+    <dl class="glossary">
+      <dt>Navigation2 (Nav2)</dt><dd>The core ROS 2 package suite for autonomous navigation of mobile robots.</dd>
+      <dt>AMCL</dt><dd>Adaptive Monte Carlo Localization; estimates the robot's position on a saved map using LiDAR.</dd>
+      <dt>Footprint</dt><dd>The exact shape and size of the robot's body, used for collision detection.</dd>
+      <dt>Costmap</dt><dd>A layer over the map that shows the "cost" or risk of passing through each point.</dd>
+      <dt>Inflation Layer</dt><dd>A layer that creates an artificial safety margin around real obstacles.</dd>
+      <dt>Global Planner</dt><dd>The component that finds the overall path from the starting point to the destination across the entire map.</dd>
+      <dt>Local Controller</dt><dd>The component that generates the actual velocity command (cmd_vel) at every moment to follow the path.</dd>
+      <dt>Pure Pursuit</dt><dd>A control algorithm that, instead of the whole path, only follows a point a few meters ahead.</dd>
+    </dl>
+    <h3>Common Mistakes in Chapter Eleven — Summary</h3>
+    <ul>
+      <li>Launching Nav2 before the AMCL particles have converged.</li>
+      <li>Incorrect Inflation Radius setting (too small or too large).</li>
+      <li>An incorrect Footprint that doesn't match ARCHO's actual size.</li>
+      <li>Forgetting that the Local Costmap is in odom, not map.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 11 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Behavior Tree and Lifecycle Nodes →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 18 — From Simulation to Real ARCHO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.6em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2: Zero to Robot &nbsp;·&nbsp; Illustrated Learning Book</div>
+    <h1>Chapter 18: From Simulation to Real ARCHO</h1>
+    <div class="subtitle">The stage where everything suddenly becomes real</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapters 7 through 17</div>
+      <div class="chip">Running project: Physical ARCHO</div>
+      <div class="chip">Focus: Bringup, calibration, safety</div>
+      <div class="chip">Study time: 130 to 150 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#layer"><span>18.1</span>What changes, what doesn't</a>
+    <a href="#bringup"><span>18.2</span>Bringup order on real hardware</a>
+    <a href="#preflight"><span>18.3</span>Preflight Checklist</a>
+    <a href="#wheeltest"><span>18.4</span>Wheel testing and open-loop motion</a>
+    <a href="#calibration"><span>18.5</span>Calibrating wheel radius and wheel separation</a>
+    <a href="#stoptest"><span>18.6</span>Stop testing: one safety layer is not enough</a>
+    <a href="#systemd"><span>18.7</span>Automatic startup with systemd</a>
+    <a href="#observability"><span>18.8</span>Logging and Observability</a>
+    <a href="#sim2real"><span>18.9</span>The Simulation-to-Reality gap</a>
+    <a href="#summary"><span>18.10</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="layer">
+    <h2><span class="num">18.1</span>What changes, what doesn't</h2>
+    <p>
+      This chapter ties together everything from the previous chapters: the good news is that when you move from
+      Gazebo to real ARCHO hardware, most of the architecture you built stays <strong>untouched</strong>.
+    </p>
+    <div class="mermaid">
+flowchart LR
+    subgraph SIM["Simulation"]
+    A1["ros2_control"] --> A2["gz_ros2_control"] --> A3["Virtual Joints"]
+    end
+    subgraph REAL["Real Robot"]
+    B1["ros2_control"] --> B2["Custom Hardware Interface"] --> B3["CAN / Serial / EtherCAT"] --> B4["Motor Drivers"]
+    end
+    style A1 fill:#eef0ff,stroke:#3d4bf5
+    style B1 fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <table>
+      <tr><th>Layer</th><th>Does it change?</th></tr>
+      <tr><td>Nav2, SLAM, Controllers</td><td>No</td></tr>
+      <tr><td>TF naming, URDF</td><td>No</td></tr>
+      <tr><td>High-level topics</td><td>No</td></tr>
+      <tr><td>Hardware Interface (the lowest layer of ros2_control)</td><td>Yes — this is the only part that actually changes</td></tr>
+    </table>
+    <div class="box idea">
+      <div class="box-title">🧠 Why this architecture is so valuable</div>
+      <p>
+        This is exactly why we emphasized separating the Hardware Interface from the rest of the architecture so
+        strongly in Chapter 8. If that separation was done correctly, moving from simulation to reality is just a
+        swap of the bottom layer, not a rewrite of the entire system.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="bringup">
+    <h2><span class="num">18.2</span>Bringup order on real hardware</h2>
+    <ol>
+      <li>Power and Safety</li>
+      <li>Microcontroller (MCU)</li>
+      <li>Motor drivers</li>
+      <li>Sensors</li>
+      <li>Hardware Interface</li>
+      <li><code>robot_state_publisher</code></li>
+      <li><code>robot_localization</code></li>
+      <li>SLAM or AMCL</li>
+      <li>Nav2</li>
+      <li>Mission Manager</li>
+    </ol>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why order matters</div>
+      <p>
+        Exactly the same reason you learned about Lifecycle Nodes in Chapter 12: if Nav2 activates before
+        Localization is ready, it can make dangerous decisions. This Bringup order applies the same principle to
+        the entire physical system.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="preflight">
+    <h2><span class="num">18.3</span>Preflight Checklist</h2>
+    <p>Before ARCHO's very first movement on real ground:</p>
+    <div class="checkpoint">
+      <ul>
+        <li>Emergency Stop is functional and accessible.</li>
+        <li>Wheels are lifted off the ground (for the first test).</li>
+        <li>Encoder direction is correct.</li>
+        <li>Motor direction is correct.</li>
+        <li>Current limit is configured.</li>
+        <li>Watchdog is active.</li>
+        <li><code>cmd_vel</code> is zero (before the test starts).</li>
+        <li>TF tree is complete — no frame is missing.</li>
+        <li>LiDAR is publishing valid data.</li>
+        <li>Battery is healthy.</li>
+        <li>The physical test area is clear of people and obstacles.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="wheeltest">
+    <h2><span class="num">18.4</span>Wheel testing and open-loop motion</h2>
+    <h3>Step one: test each wheel individually</h3>
+    <pre><code>Command positive
+      ↓
+Wheel rotates forward?</code></pre>
+    <p>If the answer is no, check these four things in order: motor direction, encoder direction, command sign, and driver mapping.</p>
+    <h3>Step two: open-loop test with increasing speeds</h3>
+    <p>Never start at high speed. The safe sequence:</p>
+    <pre><code>0.05 m/s
+0.10 m/s
+0.20 m/s
+0.30 m/s</code></pre>
+    <p>At each step, before increasing the speed, make sure ARCHO moves exactly as you expect.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="calibration">
+    <h2><span class="num">18.5</span>Calibrating wheel radius and wheel separation</h2>
+    <h3>Wheel radius calibration</h3>
+    <p>You command ARCHO to drive 5 meters straight, but the actual distance traveled is 4.8 meters:</p>
+    <pre><code>correction factor = 5 / 4.8 = 1.0417
+new_radius = old_radius × 1.0417</code></pre>
+    <h3>Wheel separation calibration</h3>
+    <p>You command ARCHO to make one full rotation, but instead of 360 degrees it actually rotates only 330 degrees:</p>
+    <div class="box eng">
+      <div class="box-title">🔧 Why this calibration is critical</div>
+      <p>
+        These are exactly the same parameters we set in <code>controllers.yaml</code> for
+        <code>diff_drive_controller</code> in Chapter 8 (<code>wheel_radius</code>, <code>wheel_separation</code>).
+        If these values don't precisely match ARCHO's real geometry, Odometry (Chapter 9) develops a systematic
+        error from the very start — and that error propagates directly into SLAM and Nav2 as well.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="stoptest">
+    <h2><span class="num">18.6</span>Stop testing: one safety layer is not enough</h2>
+    <p>You must test that ARCHO actually stops under all of these conditions:</p>
+    <ul>
+      <li>WiFi disconnection</li>
+      <li>A node crashing</li>
+      <li>micro-ROS Agent disconnection</li>
+      <li>Sudden shutdown of the main computer</li>
+      <li>Timeout with no new command received</li>
+    </ul>
+    <div class="mermaid">
+flowchart TB
+    A["High-Level Command"] --> B["ROS Watchdog"]
+    B --> C["MCU Watchdog"]
+    C --> D["Motor Driver Enable"]
+    D --> E["Mechanical / Electrical Brake"]
+    style B fill:#fdeeec,stroke:#d64a3c
+    style C fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ One safety layer is not enough</div>
+      <p>
+        Remember how we emphasized an independent Watchdog on the ESP32 in Chapter 16? Here's exactly why: if you
+        rely only on the ROS-level Watchdog and the very computer that ROS runs on crashes, no layer remains to
+        stop ARCHO. Real safety comes from redundancy of layers, not from a single point of failure.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="systemd">
+    <h2><span class="num">18.7</span>Automatic startup with systemd</h2>
+    <p>So that ARCHO comes back up on its own after any power outage or restart, without human intervention:</p>
+    <pre><code># /etc/systemd/system/archo-bringup.service
+[Unit]
+Description=ARCHO ROS 2 Bringup
+After=network-online.target
+
+[Service]
+Type=simple
+User=robot
+ExecStart=/usr/local/bin/start_archo.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+    <pre><code>#!/bin/bash
+# /usr/local/bin/start_archo.sh
+source /opt/ros/jazzy/setup.bash
+source /home/robot/archo_ws/install/setup.bash
+exec ros2 launch archo_bringup real_robot.launch.py</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="observability">
+    <h2><span class="num">18.8</span>Logging and Observability</h2>
+    <p>When ARCHO is operating in a real warehouse without direct supervision, you need to be able to answer these questions:</p>
+    <ul>
+      <li>Why did the robot stop?</li>
+      <li>What was the last fault?</li>
+      <li>What was the battery voltage at that moment?</li>
+      <li>How loaded was the CPU?</li>
+      <li>How many times did the LiDAR drop out?</li>
+      <li>Exactly when did localization get lost?</li>
+    </ul>
+    <table>
+      <tr><th>Tool</th><th>Use</th></tr>
+      <tr><td>rosbag2</td><td>Full data recording for later replay and analysis</td></tr>
+      <tr><td>diagnostic_msgs</td><td>Standardized health reporting for each subsystem</td></tr>
+      <tr><td>/diagnostics</td><td>Central topic for aggregating health status</td></tr>
+      <tr><td>Prometheus or similar</td><td>Monitoring metrics over time</td></tr>
+      <tr><td>Log Rotation</td><td>Preventing the disk from filling up</td></tr>
+      <tr><td>Health Heartbeat</td><td>Quickly detecting when a subsystem has failed</td></tr>
+    </table>
+    <pre><code>ros2 bag record \
+  /scan \
+  /imu/data \
+  /odometry/filtered \
+  /tf \
+  /tf_static \
+  /diagnostics</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="sim2real">
+    <h2><span class="num">18.9</span>The Simulation-to-Reality gap</h2>
+    <p>Even with the best Gazebo simulation (Chapter 7), the real world always has surprises in store:</p>
+    <table>
+      <tr><th>Simulation</th><th>Reality</th></tr>
+      <tr><td>Perfectly flat ground</td><td>Slip and unevenness</td></tr>
+      <tr><td>Ideal wheels</td><td>Wear, slight differences between wheels</td></tr>
+      <tr><td>Controlled noise</td><td>Real, unpredictable noise</td></tr>
+      <tr><td>Low, constant latency</td><td>Variable network and hardware latency</td></tr>
+      <tr><td>Clean sensors</td><td>Dust, direct light, surface reflections</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 How to reduce this gap</div>
+      <ul style="margin:0;">
+        <li>Add realistic noise to simulated sensors.</li>
+        <li>Simulate realistic network and processing latency.</li>
+        <li>Enter the real mass and inertia of parts into the URDF (not approximate values).</li>
+        <li>Calibrate the real friction coefficient of the warehouse floor.</li>
+        <li>Apply the real velocity and acceleration limits of the motors.</li>
+        <li><strong>Domain Randomization</strong> — randomize parameters slightly on each simulation run so the system becomes robust to a range of possible conditions instead of a single fixed world.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">18.10</span>Chapter 18 summary</h2>
+    <p>
+      ARCHO has now gone from a Gazebo simulation to a real physical robot — with a controlled Bringup order, a
+      complete Preflight Checklist, calibrated wheels, several independent safety layers, automatic startup with
+      systemd, and a logging system that always tells you why something happened.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain why only the Hardware Interface changes, not the whole architecture.</li>
+        <li>I know why the Bringup order matters.</li>
+        <li>I can describe the Wheel Radius and Wheel Separation calibration process.</li>
+        <li>I know why one safety layer is not enough and why safety must be multi-layered.</li>
+        <li>I can name at least three important differences between simulation and reality.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the running project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a fully calibrated physical version that starts up automatically via systemd, records rosbag2 data for troubleshooting, and benefits from a multi-layered safety chain.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 19 we move on to industrial-grade production standards: QoS, DDS, Diagnostics, and safety architecture — the things that take a project from "it works" to "reliable in production."</p>
+    <h3>Chapter 18 glossary</h3>
+    <dl class="glossary">
+      <dt>Preflight Checklist</dt><dd>The list of safety and technical checks that must be performed before a robot's first movement.</dd>
+      <dt>Open Loop Test</dt><dd>A motion test with gradually increasing speed, without relying on full system feedback.</dd>
+      <dt>Wheel Radius Calibration</dt><dd>Correcting the effective wheel radius based on the actual distance traveled versus the expected distance.</dd>
+      <dt>Redundancy (multi-layer safety)</dt><dd>Designing several independent safety layers so that the failure of one layer doesn't cause total system failure.</dd>
+      <dt>systemd</dt><dd>The Linux service manager used for automatic, stable startup of robot Bringup.</dd>
+      <dt>Domain Randomization</dt><dd>The technique of randomizing simulation parameters to reduce the Sim-to-Real gap.</dd>
+    </dl>
+    <h3>Common mistakes in Chapter 18 — summary</h3>
+    <ul>
+      <li>Starting the motion test at high speed instead of increasing gradually.</li>
+      <li>Skipping the Wheel Radius/Separation calibration step.</li>
+      <li>Relying on only one Watchdog layer instead of a multi-layer safety chain.</li>
+      <li>Having no logging system in place before deployment in the real environment.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 18 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: QoS, DDS, Diagnostics, and industrial safety →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

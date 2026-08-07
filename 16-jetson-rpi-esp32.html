@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 16 — ARCHO's Compute Hardware: Jetson, Raspberry Pi, and ESP32</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.55em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Tutorial Book</div>
+    <h1>Chapter 16: ARCHO's Compute Hardware — Jetson, Raspberry Pi, ESP32</h1>
+    <div class="subtitle">Which brain, which job</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 8 (ros2_control)</div>
+      <div class="chip">Running project: ARCHO's real hardware</div>
+      <div class="chip">Platforms: Jetson, Raspberry Pi, ESP32/micro-ROS</div>
+      <div class="chip">Reading time: 110–130 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#split"><span>16.1</span>Why one computer isn't enough for everything</a>
+    <a href="#jetson"><span>16.2</span>Jetson: heavy processing and AI</a>
+    <a href="#rpi"><span>16.3</span>Raspberry Pi: gateway and lightweight processing</a>
+    <a href="#esp32"><span>16.4</span>ESP32 and micro-ROS: direct motor control</a>
+    <a href="#watchdog"><span>16.5</span>Watchdog: the most important safety principle in this chapter</a>
+    <a href="#architecture"><span>16.6</span>ARCHO's complete hardware architecture</a>
+    <a href="#summary"><span>16.7</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="split">
+    <h2><span class="num">16.1</span>Why one computer isn't enough for everything</h2>
+    <p>
+      Up to this point we've assumed ARCHO has a single computer running everything — from Nav2 to motor
+      control. In the real world, that assumption rarely holds. A real robotic platform typically consists
+      of three different hardware layers, each optimized for its own job.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Why we shouldn't put motor control on the same computer as Nav2</div>
+      <p>
+        Motor control needs a very fast, predictable real-time loop — for example, a thousand times per
+        second. A regular Linux computer that's simultaneously running Nav2, SLAM, and image processing
+        cannot guarantee that timing. That's why industrial architectures separate motor control from
+        heavy processing.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="jetson">
+    <h2><span class="num">16.2</span>Jetson: heavy processing and AI</h2>
+    <p>NVIDIA Jetson is designed for heavy processing tasks:</p>
+    <ul>
+      <li>Object Detection</li>
+      <li>Depth Processing</li>
+      <li>Visual SLAM</li>
+      <li>Neural network models using CUDA and TensorRT</li>
+      <li>Camera pipeline processing</li>
+    </ul>
+    <div class="mermaid">
+flowchart TB
+    J["Jetson"] --> P["Perception"]
+    J --> C["Camera Drivers"]
+    J --> A["AI Models"]
+    J --> S["Visual SLAM"]
+    J --> H["High-Level ROS 2 (Nav2)"]
+    style J fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Don't hand real-time motor control directly to the Jetson</div>
+      <p>
+        It's better for the Jetson to send high-level commands (like target velocity) to a separate
+        microcontroller over CAN, Ethernet, or Serial, rather than controlling the motor driver directly
+        itself.
+      </p>
+    </div>
+    <pre><code>Jetson
+   │
+   ▼
+CAN / Ethernet / Serial
+   │
+   ▼
+Microcontroller
+   │
+   ▼
+Motor Drivers</code></pre>
+    <table>
+      <tr><th>Important Jetson consideration</th><th>Why it matters</th></tr>
+      <tr><td>Power and cooling</td><td>Heavy processing generates significant heat and needs proper cooling</td></tr>
+      <tr><td>Storage space</td><td>AI models and logs can take up a lot of space</td></tr>
+      <tr><td>JetPack version</td><td>Driver and library compatibility depends on the JetPack version</td></tr>
+      <tr><td>CUDA compatibility</td><td>Every AI model is tested against a specific CUDA version</td></tr>
+      <tr><td>Automatic node startup</td><td>After a power outage, the system must come back up without human intervention</td></tr>
+      <tr><td>Log rotation</td><td>Without it, the disk gradually fills up</td></tr>
+      <tr><td>Watchdog and thermal limits</td><td>Prevents overheating and system freezes</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="rpi">
+    <h2><span class="num">16.3</span>Raspberry Pi: gateway and lightweight processing</h2>
+    <p>The Raspberry Pi is well suited to lighter workloads:</p>
+    <table>
+      <tr><th>Good for</th><th>Limited for</th></tr>
+      <tr><td>LiDAR driver</td><td>Heavy AI models</td></tr>
+      <tr><td>Sensor gateway</td><td>Multiple simultaneous depth cameras</td></tr>
+      <tr><td>ROS bridge</td><td>Heavy visual SLAM</td></tr>
+      <tr><td>Mid-level control, telemetry</td><td></td></tr>
+      <tr><td>Lightweight educational robots</td><td></td></tr>
+    </table>
+    <pre><code>Raspberry Pi
+   │
+   ├── ROS 2
+   ├── LiDAR Driver
+   ├── IMU Driver
+   ├── robot_localization
+   └── Basic Nav2</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="esp32">
+    <h2><span class="num">16.4</span>ESP32 and micro-ROS: direct motor control</h2>
+    <p>
+      An ESP32 usually doesn't run a full ROS 2 stack like a computer does. There are two common paths
+      for connecting it to the ROS 2 world:
+    </p>
+    <div class="mermaid">
+flowchart LR
+    A["ESP32 Firmware"] --> B["Custom Serial/CAN Protocol"] --> C["ROS 2 Hardware Interface"]
+    </div>
+    <div class="mermaid">
+flowchart LR
+    D["ESP32"] --> E["micro-ROS"] --> F["micro-ROS Agent"] --> G["ROS 2 Graph"]
+    style E fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 What is micro-ROS</div>
+      <p>
+        micro-ROS brings the familiar ROS 2 concepts — Publisher, Subscriber, Service, Timer — to
+        microcontrollers. But because an MCU's resources (RAM, flash, CPU, networking) are far more
+        limited than a computer's, the full ROS 2 architecture shouldn't be copied onto it as-is.
+      </p>
+    </div>
+    <table>
+      <tr><th>Tasks suited to the ESP32</th><th>Tasks not suited to the ESP32</th></tr>
+      <tr><td>Reading encoders</td><td>SLAM</td></tr>
+      <tr><td>Motor speed PID</td><td>Nav2</td></tr>
+      <tr><td>Reading simple sensors</td><td>Point cloud processing</td></tr>
+      <tr><td>Watchdog</td><td>Large AI models</td></tr>
+      <tr><td>Brake command and light control</td><td></td></tr>
+      <tr><td>Sending telemetry</td><td></td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="watchdog">
+    <h2><span class="num">16.5</span>Watchdog: the most important safety principle in this chapter</h2>
+    <div class="box mistake">
+      <div class="box-title">⚠️ If communication is lost</div>
+      <p>
+        If the ESP32 receives no new command from the upper layer for a set period (say, 300 ms), it must
+        decide on its own to zero the motor command and apply the brake — without waiting for an
+        instruction from the Jetson or Raspberry Pi. If the upper layer is disconnected for any reason
+        (even a software crash), ARCHO must not keep moving on the last command it received.
+      </p>
+    </div>
+    <pre><code>No command for 300 ms
+          ↓
+Motor command = 0
+          ↓
+Brake</code></pre>
+    <p>This is one of the most important safety principles in any real industrial robot — and because it is so critical, it must be implemented independently of the entire upstream software architecture, directly on the microcontroller.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="architecture">
+    <h2><span class="num">16.6</span>ARCHO's complete hardware architecture</h2>
+    <div class="mermaid">
+flowchart TB
+    J["Jetson"] --> N["Nav2"]
+    J --> AI["AI / Perception"]
+    J --> C["Camera"]
+    J --> S["SLAM"]
+    N --> MCU["ESP32 / STM32"]
+    AI --> MCU
+    C --> MCU
+    S --> MCU
+    MCU --> E["Encoder"]
+    MCU --> PID["Motor PID"]
+    MCU --> W["Watchdog"]
+    MCU --> ES["Emergency Stop"]
+    style J fill:#eef0ff,stroke:#3d4bf5
+    style MCU fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 A split architecture for a production ARCHO</div>
+      <p>
+        In an industrial version of ARCHO with a picking arm: the Jetson is responsible for Nav2,
+        AI-based object detection, camera, and visual SLAM. These high-level decisions are sent over a
+        communication link (CAN or Serial) to a microcontroller (ESP32 or STM32), which itself directly
+        reads the encoder, closes the motor PID loop, runs the watchdog, and responds to the Emergency
+        Stop button — completely independent of whether the Jetson is healthy or not.
+      </p>
+    </div>
+    <table>
+      <tr><th>Layer</th><th>Primary responsibility</th></tr>
+      <tr><td>Jetson</td><td>Heavy processing: AI, perception, visual SLAM, Nav2</td></tr>
+      <tr><td>Raspberry Pi</td><td>Gateway or lightweight processing: LiDAR driver, telemetry</td></tr>
+      <tr><td>MCU (ESP32/STM32)</td><td>Real-time control: encoder, PID, watchdog, emergency stop</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">16.7</span>Chapter 16 summary</h2>
+    <p>
+      Now you know why a real ARCHO rarely runs on a single computer. Heavy processing (Jetson), a
+      lightweight gateway (Raspberry Pi), and direct real-time motor control (ESP32 with an independent
+      watchdog) each play a different role, and this separation improves both performance and system
+      safety.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain why motor control shouldn't run directly on the Jetson.</li>
+        <li>I know what the Raspberry Pi is good for and where it's limited.</li>
+        <li>I can explain the difference between the two paths for connecting an ESP32 to ROS 2.</li>
+        <li>I know what a watchdog does and why it must be independent of the upstream layer.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a three-layer hardware architecture: a Jetson for Nav2 and AI, and an ESP32 with an independent watchdog for direct motor and encoder control.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 17 we move to the industrial networks that actually connect these layers together: CAN bus and EtherCAT.</p>
+    <h3>Chapter 16 glossary</h3>
+    <dl class="glossary">
+      <dt>Jetson</dt><dd>NVIDIA's family of computers for parallel processing and AI at the edge.</dd>
+      <dt>micro-ROS</dt><dd>A lightweight implementation of ROS 2 concepts for running on resource-constrained microcontrollers.</dd>
+      <dt>micro-ROS Agent</dt><dd>The bridge that connects micro-ROS messages to the main ROS 2 graph.</dd>
+      <dt>Watchdog</dt><dd>A safety mechanism that stops the motor command if communication with the upstream layer is lost.</dd>
+      <dt>Real-Time</dt><dd>A system property that guarantees an operation completes within a defined, predictable time window.</dd>
+    </dl>
+    <h3>Common mistakes in Chapter 16 — summary</h3>
+    <ul>
+      <li>Running real-time motor control on the same computer that runs Nav2 and AI.</li>
+      <li>Not implementing an independent watchdog on the microcontroller.</li>
+      <li>Trying to run visual SLAM or heavy AI models on a Raspberry Pi.</li>
+      <li>Ignoring Jetson cooling and power management in the mechanical design.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 16 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: CAN Bus and EtherCAT →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

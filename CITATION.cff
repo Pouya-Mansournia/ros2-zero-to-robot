@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this book, please cite it as below."
+type: book
+title: "ROS 2: Zero to Robot — From First Node to Real Autonomous Mobile Robot"
+abstract: >-
+  A complete, project-based ROS 2 course written in English,
+  covering everything from the first ROS 2 node to a fully deployed
+  autonomous mobile robot: architecture, TF2, URDF/Xacro, Gazebo
+  simulation, Nav2, MoveIt 2, multi-robot fleets, industrial hardware,
+  CI/CD, and a practical SolidWorks-to-URDF appendix.
+authors:
+  - family-names: "Mansournia"
+    given-names: "Pouya"
+repository-code: "https://github.com/Pouya-Mansournia/ros2-zero-to-robot"
+url: "https://pouya-mansournia.github.io/ros2-zero-to-robot/"
+license: CC-BY-4.0
+version: 1.0.0
+date-released: "2026-08-07"
+keywords:
+  - ROS2
+  - robotics
+  - mobile-robots
+  - URDF
+  - Gazebo
+  - Nav2
+  - SLAM
+  - MoveIt2
+  - SolidWorks
+  - autonomous-mobile-robot

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 9 — Odometry and Sensor Fusion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Textbook</div>
+    <h1>Chapter 9: Odometry and Sensor Fusion</h1>
+    <div class="subtitle">When a single sensor isn't enough</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapters 5 and 8</div>
+      <div class="chip">Running project: ARCHO robot</div>
+      <div class="chip">Tool: robot_localization (EKF)</div>
+      <div class="chip">Reading time: 90-110 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#big-picture"><span>9.1</span>A simple question: how far has ARCHO actually moved?</a>
+    <a href="#wheel-odom"><span>9.2</span>Wheel Odometry and the Drift problem</a>
+    <a href="#imu"><span>9.3</span>IMU: the second sensor that helps</a>
+    <a href="#fusion"><span>9.4</span>Sensor Fusion with robot_localization</a>
+    <a href="#covariance"><span>9.5</span>Covariance: the language of uncertainty</a>
+    <a href="#lidar"><span>9.6</span>Why raw LiDAR doesn't go into the EKF</a>
+    <a href="#inspect"><span>9.7</span>Inspecting the fusion result</a>
+    <a href="#summary"><span>9.8</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">9.1</span>A simple question: how far has ARCHO actually moved?</h2>
+    <p>
+      In Chapter 8, <code>diff_drive_controller</code> estimated ARCHO's path from the rotation of the two
+      wheel encoders and published it on <code>/odom</code>. That looked great — until one day you notice
+      that after half an hour of driving around the warehouse, the robot's reported position is several
+      meters away from its actual position. This phenomenon is called <strong>Drift</strong>, and it's
+      exactly the problem this chapter solves.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Why a single sensor isn't enough</div>
+      <p>
+        Wheel Odometry is like counting your steps with your eyes closed — accurate and fast in the short
+        term, but every small wheel slip on the ground turns into accumulated error. An IMU is like your
+        inner-ear sense of balance — it can tell how much you've turned, but not how far you've moved
+        forward. Neither is complete on its own; but when combined, they compensate for each other's
+        weaknesses. This combination is called <strong>Sensor Fusion</strong>.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="wheel-odom">
+    <h2><span class="num">9.2</span>Wheel Odometry and the Drift problem</h2>
+    <p>Let's look at exactly what gets published on <code>/odom</code>:</p>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 topic echo /diff_drive_controller/odom --once
+<span class="term-out">pose:
+  pose:
+    position: {x: 1.842, y: 0.113, z: 0.0}
+    ...
+  covariance: [0.001, 0, 0, ...]
+twist:
+  twist:
+    linear: {x: 0.3, y: 0.0, z: 0.0}
+    angular: {z: 0.02}</span>
+      </div>
+    </div>
+    <p>The Odometry message has three main parts:</p>
+    <table>
+      <tr><th>Part</th><th>Meaning</th></tr>
+      <tr><td><code>pose</code></td><td>The robot's current estimated position and orientation</td></tr>
+      <tr><td><code>twist</code></td><td>Instantaneous linear and angular velocity</td></tr>
+      <tr><td><code>covariance</code></td><td>The degree of uncertainty in this estimate (fully explained in the next section)</td></tr>
+    </table>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Where Drift comes from</div>
+      <p>
+        Wheel Odometry assumes the wheels roll on the ground exactly as much as they rotate — no more, no
+        less. But in reality, the warehouse floor may be slippery, the wheels may spin in place a little,
+        or the actual wheel radius may differ slightly from the value written in the previous chapter's
+        <code>controllers.yaml</code> due to wear. Each of these small errors accumulates moment by moment
+        — exactly like rounding error in a long calculation.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="imu">
+    <h2><span class="num">9.3</span>IMU: the second sensor that helps</h2>
+    <p>
+      The IMU (whose physical Frame we built in Chapter 4) measures linear acceleration and angular
+      velocity at a high rate. Unlike Wheel Odometry, the IMU makes no assumptions about wheel slip — it
+      senses the body's actual motion directly. But the IMU has its own weakness too: high noise over the
+      long term causes its own position estimate to drift as well, just of a different kind.
+    </p>
+    <table>
+      <tr><th>Sensor</th><th>Strength</th><th>Weakness</th></tr>
+      <tr><td>Wheel Odometry</td><td>Accurate in the short term, stable rate</td><td>Wheel slip causes cumulative Drift</td></tr>
+      <tr><td>IMU</td><td>Senses the body's actual rotation and acceleration directly</td><td>Noisy and prone to Drift over the long term, especially for position</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="fusion">
+    <h2><span class="num">9.4</span>Sensor Fusion with robot_localization</h2>
+    <p>
+      To combine these two sources, we use a standard ROS 2 package called
+      <strong>robot_localization</strong>, which implements an Extended Kalman Filter
+      (<strong>EKF</strong>).
+    </p>
+    <div class="mermaid">
+flowchart LR
+    A["Wheel Odometry<br/>/diff_drive_controller/odom"] --> C["ekf_filter_node"]
+    B["IMU<br/>/imu/data"] --> C
+    C --> D["/odometry/filtered"]
+    C --> E["Transform: odom → base_link"]
+    style C fill:#eef0ff,stroke:#3d4bf5,color:#211f1a,font-weight:bold
+    style D fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    </div>
+    <pre><code># archo_bringup/config/ekf.yaml
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    publish_tf: true
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    odom0: /diff_drive_controller/odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+
+    imu0: /imu/data
+    imu0_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, true,
+                  true,  false, false]
+    imu0_remove_gravitational_acceleration: true</code></pre>
+
+    <div class="box def">
+      <div class="box-title">📖 How to read these true/false matrices</div>
+      <p>
+        Each <code>_config</code> field has fifteen true/false values, corresponding in order to X, Y, Z,
+        Roll, Pitch, Yaw, Vx, Vy, Vz, Vroll, Vpitch, Vyaw, Ax, Ay, Az. <code>true</code> means "use this
+        value from this sensor." For <code>odom0</code>, for example, only Vx, Vy, and Vyaw (linear and
+        angular velocity) are enabled — because we trust the wheel speeds, not their absolute position.
+        For <code>imu0</code>, Yaw, Vyaw, and longitudinal acceleration (Ax) are enabled — because the IMU
+        is more accurate at sensing rotation than linear motion.
+      </p>
+    </div>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Why imu0_remove_gravitational_acceleration matters</div>
+      <p>
+        The IMU's accelerometer always measures Earth's gravity too, even when the robot is completely
+        stationary. If this component isn't removed, the filter thinks the robot is constantly
+        accelerating — one of the most common causes of "a stationary robot slowly drifting in RViz."
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="covariance">
+    <h2><span class="num">9.5</span>Covariance: the language of uncertainty</h2>
+    <p>
+      <strong>Covariance</strong> is a number that says how trustworthy a measurement is. A very small
+      number means "I'm nearly certain"; a large number means "treat this measurement with caution." The
+      EKF uses these numbers to decide which sensor to trust more, and at which moment.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 A concrete example</div>
+      <p>
+        Suppose ARCHO is moving across a very smooth surface — Wheel Odometry is nearly error-free, so it
+        has low Covariance and the EKF trusts it more. But when it passes over a small bump, wheel slip
+        increases; here the IMU (which doesn't sense this kind of disturbance) is relatively weighted more
+        heavily. All this balancing happens automatically and moment-to-moment, performed by the EKF.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="lidar">
+    <h2><span class="num">9.6</span>Why raw LiDAR doesn't go into the EKF</h2>
+    <p>
+      A reasonable question: why don't we feed <code>/scan</code> data directly into the EKF too? Because
+      raw LiDAR is a <code>LaserScan</code> — a list of distances in various directions — not a Pose or
+      Odometry. The EKF needs data with motion structure (position, velocity, acceleration). If we want to
+      use LiDAR to correct position, we first have to convert it into a Pose via SLAM or map matching
+      (which we'll see in Chapters 10 and 11); it's that Pose, not the raw Scan, that enters the Fusion.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="inspect">
+    <h2><span class="num">9.7</span>Inspecting the fusion result</h2>
+    <pre><code>ros2 run tf2_ros tf2_echo odom base_link
+ros2 run tf2_tools view_frames
+ros2 topic echo /odometry/filtered</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common error: Lookup would require extrapolation</div>
+      <p>
+        As we saw in Chapter 5, this error usually means the Timestamps aren't synchronized, or
+        <code>use_sim_time</code> isn't set consistently across all the involved Nodes (including
+        <code>ekf_filter_node</code>). In simulation, never forget this setting.
+      </p>
+    </div>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Chapter 9 Checkpoint</strong>
+      <ul>
+        <li>The <code>/odometry/filtered</code> topic is published at a stable rate (e.g., 50 Hz).</li>
+        <li>The <code>odom → base_link</code> Transform is available with no extrapolation error.</li>
+        <li>When ARCHO stops, the filtered position also stays fixed (no drifting from IMU gravity).</li>
+        <li>The EKF output's Covariance is smaller than the Covariance of either sensor alone.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">9.8</span>Chapter 9 Summary</h2>
+    <p>
+      ARCHO no longer relies on a single sensor source for position estimation. Wheel Odometry and the
+      IMU, each with their own strengths and weaknesses, are combined by <code>robot_localization</code>
+      to produce a more stable estimate on <code>/odometry/filtered</code> — a foundation that SLAM and
+      Nav2 in later chapters simply cannot work correctly without.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a complete <code>ekf.yaml</code>, and the <code>odom → base_link</code> chain, which we only defined in Chapter 5, is now actually populated with fused Wheel Odometry and IMU data.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 10, ARCHO enters an unknown environment for the first time with no pre-built map, and uses SLAM Toolbox to simultaneously explore the environment and build a map — precisely where this chapter's accurate position estimate is an absolute prerequisite.</p>
+    <h3>Chapter 9 Glossary</h3>
+    <dl class="glossary">
+      <dt>Odometry</dt><dd>Estimation of a robot's position and velocity based on internal motion (wheel rotation or accelerometer), without reference to the external environment.</dd>
+      <dt>Drift</dt><dd>Cumulative error in a position estimate that grows larger over time.</dd>
+      <dt>Sensor Fusion</dt><dd>Combining multiple sensor sources to achieve a more accurate and stable estimate than any single one alone.</dd>
+      <dt>EKF (Extended Kalman Filter)</dt><dd>A statistical algorithm for combining noisy measurements from multiple sensors, weighted according to each one's uncertainty.</dd>
+      <dt>Covariance</dt><dd>A numerical measure of a measurement's uncertainty; a smaller number means greater confidence.</dd>
+      <dt>robot_localization</dt><dd>The standard ROS 2 package for position Sensor Fusion using an EKF or UKF.</dd>
+    </dl>
+    <h3>Chapter 9 common errors — recap</h3>
+    <ul>
+      <li>Forgetting imu0_remove_gravitational_acceleration and observing Drift caused by gravity.</li>
+      <li>Feeding a raw LaserScan directly into the EKF instead of a valid Pose.</li>
+      <li>Inconsistent use_sim_time between ekf_filter_node and the rest of the Nodes.</li>
+      <li>Enabling the wrong fields in the _config matrix (e.g., trusting Odometry's absolute position instead of just its velocity).</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 9 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: SLAM — ARCHO builds a map of the warehouse →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

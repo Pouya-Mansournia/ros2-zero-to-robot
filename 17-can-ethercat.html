@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 17 — CAN Bus and EtherCAT: ARCHO's Communication Vessels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.6em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 17: CAN Bus and EtherCAT — ARCHO's Communication Vessels</h1>
+    <div class="subtitle">When WiFi and USB are no longer enough</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 8 (ros2_control), Chapter 16 (Hardware)</div>
+      <div class="chip">Ongoing project: ARCHO's real hardware</div>
+      <div class="chip">Industrial networks: CAN Bus, EtherCAT</div>
+      <div class="chip">Reading time: 90 to 110 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#why"><span>17.1</span>Why industrial robots use special-purpose networks</a>
+    <a href="#can-basics"><span>17.2</span>CAN Bus: the rugged industrial network</a>
+    <a href="#can-frame"><span>17.3</span>The structure of a CAN message</a>
+    <a href="#can-ros2"><span>17.4</span>CAN in ros2_control</a>
+    <a href="#can-errors"><span>17.5</span>Common CAN errors</a>
+    <a href="#ethercat"><span>17.6</span>EtherCAT: when tighter timing is required</a>
+    <a href="#comparison"><span>17.7</span>CAN or EtherCAT: which one for what job</a>
+    <a href="#summary"><span>17.8</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="why">
+    <h2><span class="num">17.1</span>Why industrial robots use special-purpose networks</h2>
+    <p>
+      In the previous chapter we saw that ARCHO is built from three hardware layers: the Jetson, the Raspberry
+      Pi, and a microcontroller. But how do these layers actually connect to each other and to the motor
+      drivers? USB and WiFi aren't well suited for this job — neither in terms of resistance to industrial
+      electrical noise, nor in terms of timing reliability.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="can-basics">
+    <h2><span class="num">17.2</span>CAN Bus: the rugged industrial network</h2>
+    <div class="box def">
+      <div class="box-title">📖 What is CAN</div>
+      <p>Controller Area Network — a rugged industrial network used in automotive and robotics applications for communication between controllers.</p>
+    </div>
+    <table>
+      <tr><th>Feature</th><th>Meaning</th></tr>
+      <tr><td>Differential Signaling</td><td>Sending the signal over two wires with opposite polarity, which creates high resistance to electrical noise</td></tr>
+      <tr><td>Arbitration</td><td>Every message has a priority; if two devices send at the same time, the more important message wins</td></tr>
+      <tr><td>Error detection</td><td>Transmission errors are detected quickly and the message is resent</td></tr>
+    </table>
+    <div class="mermaid">
+flowchart TB
+    J["Jetson / Raspberry Pi"] --> U["USB-to-CAN"]
+    U --> CB["CAN Bus"]
+    CB --> M1["Motor Driver 1"]
+    CB --> M2["Motor Driver 2"]
+    CB --> BMS["Battery BMS"]
+    CB --> SC["Safety Controller"]
+    CB --> IO["IO Controller"]
+    style CB fill:#eef0ff,stroke:#3d4bf5
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="can-frame">
+    <h2><span class="num">17.3</span>The structure of a CAN message</h2>
+    <p>A CAN message (Frame) is usually made up of three parts:</p>
+    <table>
+      <tr><th>Part</th><th>Meaning</th></tr>
+      <tr><td>CAN ID</td><td>The message identifier, which determines both the message type and its priority</td></tr>
+      <tr><td>DLC (Data Length Code)</td><td>The number of data bytes in this message</td></tr>
+      <tr><td>Data Bytes</td><td>The actual payload of the message</td></tr>
+    </table>
+    <pre><code># Sample CAN message for a motor velocity command
+ID: 0x201
+Data:
+  [Velocity Low]
+  [Velocity High]
+  [Current Low]
+  [Current High]
+  ...</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="can-ros2">
+    <h2><span class="num">17.4</span>CAN in ros2_control</h2>
+    <p>Remember in Chapter 8 we saw that <code>diff_drive_controller</code> sends commands through <code>controller_manager</code>? On real hardware, this chain has one more layer:</p>
+    <div class="mermaid">
+flowchart TB
+    A["diff_drive_controller"] --> B["controller_manager"]
+    B --> C["Hardware Interface"]
+    C --> D["SocketCAN"]
+    D --> E["CAN Bus"]
+    E --> F["Motor Drivers"]
+    style C fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <p>The Hardware Interface (which we briefly saw in Chapter 8) has two main conceptual functions on real hardware:</p>
+    <table>
+      <tr><th>Function</th><th>Responsibility</th></tr>
+      <tr><td><code>read()</code></td><td>Reads Encoder, Velocity, Current, and Fault data from the motor driver</td></tr>
+      <tr><td><code>write()</code></td><td>Sends Velocity Command, Torque Command, Enable, and Brake to the motor driver</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="can-errors">
+    <h2><span class="num">17.5</span>Common CAN errors</h2>
+    <table>
+      <tr><th>Error</th><th>Consequence</th></tr>
+      <tr><td>Incorrect termination</td><td>Signal reflection and communication errors</td></tr>
+      <tr><td>Mismatched baud rate between devices</td><td>No device can understand other devices' messages</td></tr>
+      <tr><td>Improper grounding</td><td>Excessive noise and random errors</td></tr>
+      <tr><td>Duplicate ID</td><td>Message collisions and unpredictable behavior</td></tr>
+      <tr><td>High bus load</td><td>Delays in the delivery of critical messages</td></tr>
+      <tr><td>Long or unsuitable cabling</td><td>Signal degradation and bit errors</td></tr>
+      <tr><td>Missing heartbeat</td><td>The system fails to notice when a device disconnects</td></tr>
+      <tr><td>Unmanaged Bus-Off</td><td>The entire network goes down after repeated errors</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="ethercat">
+    <h2><span class="num">17.6</span>EtherCAT: when tighter timing is required</h2>
+    <p>
+      CAN is sufficient for most mobile robots like ARCHO. But if ARCHO had a multi-axis industrial arm that
+      needed very precise timing coordination, <strong>EtherCAT</strong> would typically be used instead.
+    </p>
+    <table>
+      <tr><th>Well suited for</th></tr>
+      <tr><td>Servo Drives</td></tr>
+      <tr><td>Multi-axis robotic arms</td></tr>
+      <tr><td>Simultaneous coordination of multiple axes</td></tr>
+      <tr><td>Precise control with very low cycle time</td></tr>
+    </table>
+    <div class="mermaid">
+flowchart TB
+    IPC["Industrial PC"] --> EM["EtherCAT Master"]
+    EM --> D1["Servo Drive 1"]
+    EM --> D2["Servo Drive 2"]
+    EM --> IO["IO Module"]
+    EM --> SM["Safety Module"]
+    style EM fill:#f4effe,stroke:#8b5cf6
+    </div>
+    <p>In ROS 2:</p>
+    <div class="mermaid">
+flowchart LR
+    A["ros2_control"] --> B["EtherCAT Hardware Interface"] --> C["EtherCAT Master"] --> D["Servo Drives"]
+    </div>
+    <div class="box eng">
+      <div class="box-title">🔧 Distributed Clocks: timing coordination across multiple axes</div>
+      <p>
+        One of EtherCAT's key features is that it can synchronize the internal clocks of all drives together —
+        every axis follows a common, synchronized clock. This is essential for motions where several axes must
+        move precisely and simultaneously in coordination (such as a multi-axis welding arm).
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="comparison">
+    <h2><span class="num">17.7</span>CAN or EtherCAT: which one for what job</h2>
+    <table>
+      <tr><th></th><th>CAN Bus</th><th>EtherCAT</th></tr>
+      <tr><td>Speed and timing precision</td><td>Suitable for most mobile robots</td><td>Much higher timing precision</td></tr>
+      <tr><td>Complexity</td><td>Simpler and cheaper</td><td>More complex and more expensive</td></tr>
+      <tr><td>Common use case</td><td>Wheel motors, sensors, BMS</td><td>Industrial servo drives, multi-axis arms</td></tr>
+      <tr><td>Example in ARCHO</td><td>Differential-drive wheels, Battery BMS</td><td>Multi-axis coordinated pick arm</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">17.8</span>Chapter 17 summary</h2>
+    <p>
+      Now you know that behind every motion command that Nav2 or MoveIt issues for ARCHO, a real industrial
+      network — CAN Bus for the wheels and sensors, or EtherCAT for a multi-axis arm — delivers that command
+      reliably and on time to the motor drivers.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain why CAN Bus is resistant to industrial noise.</li>
+        <li>I know what Arbitration does in CAN.</li>
+        <li>I can name at least four common CAN errors.</li>
+        <li>I know why EtherCAT is better suited than CAN for multi-axis coordination.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now uses CAN Bus to connect the wheel drivers and Battery BMS to the Jetson, with a complete Hardware Interface that implements <code>read()</code> and <code>write()</code> over SocketCAN.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 18 we bring all of these layers together and see how we move from a simulated ARCHO in Gazebo to a real ARCHO running on hardware.</p>
+    <h3>Chapter 17 glossary</h3>
+    <dl class="glossary">
+      <dt>CAN Bus</dt><dd>A rugged industrial network for communication between controllers, using differential signaling.</dd>
+      <dt>Arbitration</dt><dd>The mechanism for determining message priority when multiple messages are sent on CAN at the same time.</dd>
+      <dt>SocketCAN</dt><dd>The standard Linux interface for working with CAN networks like an ordinary network socket.</dd>
+      <dt>EtherCAT</dt><dd>An industrial network with very precise timing, suited for coordinated multi-axis servo control.</dd>
+      <dt>Distributed Clocks</dt><dd>EtherCAT's mechanism for synchronizing the internal clocks of multiple devices.</dd>
+      <dt>Bus-Off</dt><dd>A severe CAN error state in which a node is completely disconnected from the network.</dd>
+    </dl>
+    <h3>Chapter 17 common mistakes — summary</h3>
+    <ul>
+      <li>Not installing termination resistors correctly at both ends of the CAN bus.</li>
+      <li>Using CAN for an application that actually requires EtherCAT-level timing precision.</li>
+      <li>Not having a heartbeat to detect when a node disconnects from the network.</li>
+      <li>Neglecting Bus-Off error handling in software.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 17 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: From simulation to real hardware →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

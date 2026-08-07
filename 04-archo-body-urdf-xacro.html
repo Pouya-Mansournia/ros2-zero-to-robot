@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4 — The ARCHO Body with URDF and Xacro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 4: The ARCHO Body with URDF and Xacro</h1>
+    <div class="subtitle">From an empty XML file to a simulation-ready differential-drive robot</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapters 1 to 3</div>
+      <div class="chip">Ongoing project: the ARCHO robot</div>
+      <div class="chip">Tools: Xacro, check_urdf</div>
+      <div class="chip">Study time: 120 to 150 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#big-picture"><span>4.1</span>Before the code: ARCHO's full architecture</a>
+    <a href="#project"><span>4.2</span>One project, five packages</a>
+    <a href="#urdf"><span>4.3</span>What URDF and Xacro are</a>
+    <a href="#footprint"><span>4.4</span>base_footprint and base_link</a>
+    <a href="#body"><span>4.5</span>Building the body: Visual, Collision, Inertial</a>
+    <a href="#wheels"><span>4.6</span>Drive wheels with a macro</a>
+    <a href="#caster-sensors"><span>4.7</span>Caster wheel, LiDAR, and IMU</a>
+    <a href="#validate"><span>4.8</span>Converting and validating the model</a>
+    <a href="#summary"><span>4.9</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">4.1</span>Before the code: ARCHO's full architecture</h2>
+    <p>
+      Until now, ARCHO existed only in our minds and in a few simple nodes. From this chapter onward, we
+      give it a physical body for the first time. But before opening any editor, let's sidestep a common
+      beginner mistake: rushing to write code. A professional robotics engineer, before writing a single
+      line of code, asks a simple question: "What parts do I have, and how do these parts connect to each
+      other?"
+    </p>
+    <p>
+      ARCHO is a <strong>Differential Drive</strong> robot: two main wheels, each independently
+      controlled, and one caster wheel for balance. If the speeds of the two wheels are equal, the robot
+      goes straight; if one is faster, it turns; and if one goes forward while the other goes backward,
+      the robot rotates almost about its own axis — exactly what's needed to maneuver through the narrow
+      aisles of a warehouse.
+    </p>
+
+    <div class="figure">
+      <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <text x="350" y="30" fill="#211f1a" font-size="14" font-family="Inter" text-anchor="middle" font-weight="700">Differential Drive Motion Model</text>
+        <circle cx="150" cy="110" r="14" fill="#eef0ff" stroke="#3d4bf5" stroke-width="2"/>
+        <text x="150" y="140" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Both wheels equal</text>
+        <line x1="130" y1="110" x2="170" y2="110" stroke="#3d4bf5" stroke-width="2"/>
+        <line x1="150" y1="145" x2="150" y2="90" stroke="#0e9e6e" stroke-width="2" marker-end="url(#arB)"/>
+        <text x="150" y="80" fill="#0e9e6e" font-size="11" font-family="Inter" text-anchor="middle">Straight</text>
+
+        <circle cx="350" cy="110" r="14" fill="#eef0ff" stroke="#3d4bf5" stroke-width="2"/>
+        <text x="350" y="140" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Right wheel faster</text>
+        <text x="350" y="80" fill="#0e9e6e" font-size="11" font-family="Inter" text-anchor="middle">↖ Turn left</text>
+
+        <circle cx="550" cy="110" r="14" fill="#eef0ff" stroke="#3d4bf5" stroke-width="2"/>
+        <text x="550" y="140" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Wheels opposite</text>
+        <text x="550" y="80" fill="#0e9e6e" font-size="11" font-family="Inter" text-anchor="middle">↻ Spin in place</text>
+        <defs><marker id="arB" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0e9e6e"/></marker></defs>
+      </svg>
+      <figcaption>Figure 4.1 — The three basic behaviors of a differential-drive robot, achieved just by changing the speed ratio of the two wheels.</figcaption>
+    </div>
+
+    <p>The complete ARCHO project is made up of eight layers, each built on top of the previous one:</p>
+    <div class="mermaid">
+flowchart TB
+    A["URDF / Xacro<br/>Robot Body"] --> B["Gazebo<br/>Physical Simulation"]
+    B --> C["ros2_control<br/>Commanding Motion"]
+    A --> D["TF2<br/>Component Positions"]
+    D --> E["Odometry<br/>Motion Estimation"]
+    E --> F["SLAM / AMCL<br/>Mapping and Localization"]
+    F --> G["Navigation2<br/>Autonomous Path Planning"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a,font-weight:bold
+    style G fill:#eafaf3,stroke:#0e9e6e,color:#211f1a,font-weight:bold
+    </div>
+
+    <div class="box idea">
+      <div class="box-title">🧠 The golden rule of robotics projects</div>
+      <p>
+        Each layer must be tested on its own before being connected to the next layer. If one day ARCHO
+        doesn't move in Nav2, the problem could be a wrong URDF, a wrong wheel direction, an incomplete
+        TF, incorrect odometry, a wrong LiDAR, or a poorly tuned controller. If you build everything at
+        once, finding the cause is nearly impossible; if you move forward step by step and verify each
+        stage, the problem is always exactly identifiable. That's why this chapter and the following ones
+        each end with a defined checkpoint.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="project">
+    <h2><span class="num">4.2</span>One project, five packages</h2>
+    <p>
+      In Chapter 2, a single package was enough for learning purposes. But a real robot project is
+      usually split across several packages — exactly the way a factory is divided into several
+      specialized departments, rather than one big, crowded hall.
+    </p>
+    <pre><code>archo_ws/
+└── src/
+    ├── archo_description/   # Robot body: URDF/Xacro, meshes, RViz
+    ├── archo_gazebo/        # Simulation world, worlds
+    ├── archo_bringup/       # Main launch that starts everything
+    ├── archo_slam/          # SLAM settings and maps
+    └── archo_navigation/    # Nav2 settings</code></pre>
+
+    <table>
+      <tr><th>Benefit of splitting into multiple packages</th><th>Explanation</th></tr>
+      <tr><td>Easier maintenance</td><td>Each package has only one responsibility</td></tr>
+      <tr><td>Easier debugging</td><td>The problem is immediately confined to a specific area</td></tr>
+      <tr><td>Reusability</td><td>For example, <code>archo_description</code> can also be used in a different project</td></tr>
+      <tr><td>Industry alignment</td><td>Almost all open-source and industrial ROS 2 projects follow this same pattern</td></tr>
+    </table>
+
+    <p>In this chapter, we only work with <code>archo_description</code> — the package responsible for answering the question: "What does the robot look like, what parts does it have, and where is each part relative to the others?"</p>
+    <pre><code>cd ~/archo_ws/src
+ros2 pkg create archo_description --build-type ament_cmake
+cd archo_description
+mkdir -p urdf meshes launch rviz config</code></pre>
+
+    <div class="box def">
+      <div class="box-title">📖 Why ament_cmake instead of ament_python?</div>
+      <p>
+        Packages that mainly contain URDF, Xacro, launch, and config files — not executable Python code —
+        are usually built with <code>ament_cmake</code>. This build model is better suited to installing
+        and managing non-executable files. Packages that contain Python nodes (like
+        <code>archo_bringup</code> in the previous chapter) are usually <code>ament_python</code>.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="urdf">
+    <h2><span class="num">4.3</span>What URDF and Xacro are</h2>
+    <div class="box def">
+      <div class="box-title">📖 Definition</div>
+      <p>
+        <strong>URDF</strong> (Unified Robot Description Format) is the standard format for describing a
+        robot's physical structure in ROS: what parts it has, where the joints are, what each part's
+        visual appearance and physical collision shape are, and what its mass and moment of inertia are.
+        <strong>Xacro</strong> is an added layer on top of URDF that allows defining variables,
+        calculations, macros, and splitting a file into multiple parts — because writing raw URDF for a
+        robot with dozens of parts quickly becomes unmanageable.
+      </p>
+    </div>
+    <pre><code>Xacro → URDF → robot_state_publisher → TF + RobotModel</code></pre>
+
+    <p>Let's create the main file:</p>
+    <pre><code>touch ~/archo_ws/src/archo_description/urdf/archo.urdf.xacro</code></pre>
+    <pre><code>&lt;?xml version="1.0"?&gt;
+&lt;robot
+  xmlns:xacro="http://www.ros.org/wiki/xacro"
+  name="archo"&gt;
+&lt;/robot&gt;</code></pre>
+    <p>
+      The line <code>xmlns:xacro="..."</code> enables Xacro features such as
+      <code>&lt;xacro:property&gt;</code> and <code>&lt;xacro:macro&gt;</code>. Every link, joint, and
+      macro must be placed between this same opening and closing <code>&lt;robot&gt;</code> tag.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="footprint">
+    <h2><span class="num">4.4</span>base_footprint and base_link</h2>
+    <p>
+      The first frame we create is not the robot's actual body — it's a hypothetical frame on the ground
+      surface:
+    </p>
+    <pre><code>&lt;link name="base_footprint"/&gt;</code></pre>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Why not place the body directly on the ground?</div>
+      <p>
+        The center of the body is usually above the ground — for example, if the body height is 0.18
+        meters, its center is about 0.09 meters above the ground. But Navigation2 likes to have a frame
+        exactly on the ground, with no roll or pitch. That's why we create two frames:
+        <code>base_footprint</code> on the ground, and <code>base_link</code>, which is the body's main
+        physical frame and the one to which all other parts (wheels, LiDAR, IMU) are attached.
+      </p>
+    </div>
+
+    <div class="figure">
+      <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <text x="250" y="30" fill="#211f1a" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">ARCHO's Two Base Frames</text>
+        <rect x="150" y="50" width="200" height="60" rx="8" fill="#eef0ff" stroke="#3d4bf5" stroke-width="2"/>
+        <text x="250" y="85" fill="#211f1a" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">base_link (body center)</text>
+        <line x1="250" y1="110" x2="250" y2="160" stroke="#7a7568" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="270" y="135" fill="#7a7568" font-size="11" font-family="Inter">Fixed joint — half the body height</text>
+        <circle cx="250" cy="165" r="5" fill="#0e9e6e"/>
+        <text x="250" y="190" fill="#0e9e6e" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">base_footprint</text>
+        <line x1="30" y1="165" x2="470" y2="165" stroke="#c8862c" stroke-width="2"/>
+        <text x="460" y="185" fill="#c8862c" font-size="11" font-family="Inter" text-anchor="end">Ground surface</text>
+      </svg>
+      <figcaption>Figure 4.2 — base_footprint sits exactly on the ground; base_link is at the geometric center of the body, connected to it with a fixed joint.</figcaption>
+    </div>
+
+    <div class="box eng">
+      <div class="box-title">🔧 ROS axis convention</div>
+      <p>In ROS, it's always: <code>X = forward</code>, <code>Y = robot's left</code>, <code>Z = up</code>. You must keep this convention in mind from the very start — if you get the directions wrong, the robot might drive backward, the LiDAR might read reversed, or rotations might become inconsistent with TF.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="body">
+    <h2><span class="num">4.5</span>Building the body: Visual, Collision, Inertial</h2>
+    <p>First, instead of hardcoded numbers, we define the body dimensions as properties — exactly the same parameter philosophy we learned in Chapter 1, this time in the world of URDF:</p>
+    <pre><code>&lt;xacro:property name="base_length" value="0.50"/&gt;
+&lt;xacro:property name="base_width"  value="0.36"/&gt;
+&lt;xacro:property name="base_height" value="0.18"/&gt;
+&lt;xacro:property name="base_mass"   value="12.0"/&gt;</code></pre>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ All dimensions are in meters</div>
+      <p>
+        URDF uses SI units. Writing <code>&lt;box size="50 36 18"/&gt;</code> means a body 50 by 36 by 18
+        <strong>meters</strong> — a building, not a robot! The correct value is <code>0.50 0.36 0.18</code>.
+      </p>
+    </div>
+
+    <p>Now let's build <code>base_link</code> itself with a custom color:</p>
+    <pre><code>&lt;material name="archo_blue"&gt;
+  &lt;color rgba="0.12 0.35 0.70 1.0"/&gt;
+&lt;/material&gt;
+
+&lt;link name="base_link"&gt;
+  &lt;visual&gt;
+    &lt;origin xyz="0 0 0" rpy="0 0 0"/&gt;
+    &lt;geometry&gt;
+      &lt;box size="${base_length} ${base_width} ${base_height}"/&gt;
+    &lt;/geometry&gt;
+    &lt;material name="archo_blue"/&gt;
+  &lt;/visual&gt;
+
+  &lt;collision&gt;
+    &lt;origin xyz="0 0 0" rpy="0 0 0"/&gt;
+    &lt;geometry&gt;
+      &lt;box size="${base_length} ${base_width} ${base_height}"/&gt;
+    &lt;/geometry&gt;
+  &lt;/collision&gt;
+
+  &lt;inertial&gt;
+    &lt;origin xyz="0 0 0" rpy="0 0 0"/&gt;
+    &lt;mass value="${base_mass}"/&gt;
+    &lt;inertia
+      ixx="${base_mass * (base_width*base_width + base_height*base_height) / 12.0}"
+      ixy="0.0" ixz="0.0"
+      iyy="${base_mass * (base_length*base_length + base_height*base_height) / 12.0}"
+      iyz="0.0"
+      izz="${base_mass * (base_length*base_length + base_width*base_width) / 12.0}"/&gt;
+  &lt;/inertial&gt;
+&lt;/link&gt;</code></pre>
+
+    <table>
+      <tr><th>Part</th><th>What question it answers</th></tr>
+      <tr><td><code>visual</code></td><td>What should it look like in RViz/Gazebo?</td></tr>
+      <tr><td><code>collision</code></td><td>What shape should the physics engine use for collisions?</td></tr>
+      <tr><td><code>inertial</code></td><td>What are the mass, center of mass, and resistance to rotation?</td></tr>
+    </table>
+
+    <div class="box real">
+      <div class="box-title">🌍 Why we keep collision simple</div>
+      <p>
+        The <code>visual</code> appearance of the body can be a complex, beautiful mesh from a CAD
+        program, but <code>collision</code> is usually a simple shape like a box. If the physics engine
+        had to compute collisions on a mesh with millions of faces, the simulation would become severely
+        slow. This is exactly the trade-off between visual fidelity and computational performance that
+        we'll return to in the next chapter when working with Gazebo.
+      </p>
+    </div>
+
+    <p>Finally, we connect the two frames with a fixed joint:</p>
+    <pre><code>&lt;joint name="base_footprint_joint" type="fixed"&gt;
+  &lt;parent link="base_footprint"/&gt;
+  &lt;child link="base_link"/&gt;
+  &lt;origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0"/&gt;
+&lt;/joint&gt;</code></pre>
+    <p>
+      The value <code>${base_height / 2.0}</code> is not arbitrary: since the body's frame is at the
+      center of the box, for the bottom of the body to sit exactly on the ground, its center must be
+      half the height above <code>base_footprint</code>.
+    </p>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common mistake: half the body below ground</div>
+      <p>
+        If you write this <code>origin</code> as <code>xyz="0 0 0"</code>, the center of the body ends up
+        exactly on the ground, and as a result half the body sinks into the ground — the most common
+        mistake the first time you write this joint.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Easy exercise</div>
+      <p>
+        Write out the full file above, then change the body dimensions to <code>0.55 × 0.40 × 0.20</code>
+        meters. What should the new <code>origin</code> value in the joint be?
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="wheels">
+    <h2><span class="num">4.6</span>Drive wheels with a macro</h2>
+    <p>
+      ARCHO's wheels are built as cylinders. But there's a subtle point: in URDF, a cylinder's long axis
+      is by default along Z, whereas the wheel needs to rotate about the Y axis. So we rotate the
+      geometry 90 degrees about X.
+    </p>
+    <pre><code>&lt;xacro:property name="pi" value="3.141592653589793"/&gt;
+&lt;xacro:property name="wheel_radius" value="0.09"/&gt;
+&lt;xacro:property name="wheel_width" value="0.04"/&gt;
+&lt;xacro:property name="wheel_mass" value="0.8"/&gt;
+&lt;xacro:property name="wheel_y_offset" value="0.20"/&gt;</code></pre>
+
+    <p>
+      Instead of writing a repetitive block for the left wheel and again for the right wheel, we create a
+      <strong>macro</strong> — exactly the same "don't repeat yourself" principle we follow in
+      programming:
+    </p>
+    <pre><code>&lt;xacro:macro name="drive_wheel" params="prefix y_position"&gt;
+  &lt;link name="${prefix}_wheel_link"&gt;
+    &lt;visual&gt;
+      &lt;origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="${wheel_radius}" length="${wheel_width}"/&gt;
+      &lt;/geometry&gt;
+      &lt;material name="wheel_black"/&gt;
+    &lt;/visual&gt;
+    &lt;collision&gt;
+      &lt;origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="${wheel_radius}" length="${wheel_width}"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+    &lt;inertial&gt;
+      &lt;mass value="${wheel_mass}"/&gt;
+      &lt;origin xyz="0 0 0" rpy="0 0 0"/&gt;
+      &lt;inertia
+        ixx="${wheel_mass * (3*wheel_radius*wheel_radius + wheel_width*wheel_width) / 12.0}"
+        ixy="0" ixz="0"
+        iyy="${wheel_mass * wheel_radius * wheel_radius / 2.0}"
+        iyz="0"
+        izz="${wheel_mass * (3*wheel_radius*wheel_radius + wheel_width*wheel_width) / 12.0}"/&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="${prefix}_wheel_joint" type="continuous"&gt;
+    &lt;parent link="base_link"/&gt;
+    &lt;child link="${prefix}_wheel_link"/&gt;
+    &lt;origin xyz="0 ${y_position} 0" rpy="0 0 0"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+  &lt;/joint&gt;
+&lt;/xacro:macro&gt;
+
+&lt;xacro:drive_wheel prefix="left"  y_position="${wheel_y_offset}"/&gt;
+&lt;xacro:drive_wheel prefix="right" y_position="${-wheel_y_offset}"/&gt;</code></pre>
+
+    <table>
+      <tr><th>Question</th><th>Answer</th></tr>
+      <tr><td>Why <code>type="continuous"</code> and not <code>revolute</code>?</td><td><code>revolute</code> has an angle limit (e.g. ±90°); the wheel needs to be able to rotate infinitely</td></tr>
+      <tr><td>Why <code>axis xyz="0 1 0"</code>?</td><td>It means the wheel rotates about the Y axis; if it's wrong, the wheel spins like a coin or the robot doesn't move</td></tr>
+      <tr><td>Why a macro instead of copy-paste?</td><td>A single change (e.g. wheel radius) is applied in one place and both wheels update automatically</td></tr>
+    </table>
+
+    <div class="exercise">
+      <div class="level">Medium exercise</div>
+      <p>
+        Suppose you want to build a larger version of ARCHO with a wheel radius of 0.12 meters and a
+        wheel separation of 0.30 meters. By changing only the properties (not the macro itself), how
+        would this be done?
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="caster-sensors">
+    <h2><span class="num">4.7</span>Caster wheel, LiDAR, and IMU</h2>
+    <p>Two drive wheels alone cannot keep the body balanced; an auxiliary caster wheel is needed. For simplicity, we build it as a sphere — a sphere has less lateral friction and makes the simulation more stable:</p>
+    <pre><code>&lt;link name="caster_link"&gt;
+  &lt;visual&gt;&lt;geometry&gt;&lt;sphere radius="0.04"/&gt;&lt;/geometry&gt;&lt;/visual&gt;
+  &lt;collision&gt;&lt;geometry&gt;&lt;sphere radius="0.04"/&gt;&lt;/geometry&gt;&lt;/collision&gt;
+  &lt;inertial&gt;
+    &lt;mass value="0.15"/&gt;
+    &lt;inertia ixx="0.000096" ixy="0" ixz="0" iyy="0.000096" iyz="0" izz="0.000096"/&gt;
+  &lt;/inertial&gt;
+&lt;/link&gt;
+
+&lt;joint name="caster_joint" type="fixed"&gt;
+  &lt;parent link="base_link"/&gt;
+  &lt;child link="caster_link"/&gt;
+  &lt;origin xyz="-0.18 0 -0.05" rpy="0 0 0"/&gt;
+&lt;/joint&gt;</code></pre>
+
+    <p>Now the LiDAR and IMU — the same two sensors whose glossary entries we saw in Chapter 1 — get physical frames here for the first time:</p>
+    <pre><code>&lt;link name="laser_link"&gt;
+  &lt;visual&gt;&lt;geometry&gt;&lt;cylinder radius="0.045" length="0.04"/&gt;&lt;/geometry&gt;&lt;/visual&gt;
+  &lt;collision&gt;&lt;geometry&gt;&lt;cylinder radius="0.045" length="0.04"/&gt;&lt;/geometry&gt;&lt;/collision&gt;
+  &lt;inertial&gt;
+    &lt;mass value="0.2"/&gt;
+    &lt;inertia ixx="0.0002" ixy="0" ixz="0" iyy="0.0002" iyz="0" izz="0.0002"/&gt;
+  &lt;/inertial&gt;
+&lt;/link&gt;
+
+&lt;joint name="laser_joint" type="fixed"&gt;
+  &lt;parent link="base_link"/&gt;
+  &lt;child link="laser_link"/&gt;
+  &lt;origin xyz="0.12 0 0.16" rpy="0 0 0"/&gt;
+&lt;/joint&gt;
+
+&lt;link name="imu_link"&gt;
+  &lt;visual&gt;&lt;geometry&gt;&lt;box size="0.04 0.03 0.015"/&gt;&lt;/geometry&gt;&lt;/visual&gt;
+&lt;/link&gt;
+
+&lt;joint name="imu_joint" type="fixed"&gt;
+  &lt;parent link="base_link"/&gt;
+  &lt;child link="imu_link"/&gt;
+  &lt;origin xyz="0 0 0.11" rpy="0 0 0"/&gt;
+&lt;/joint&gt;</code></pre>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Why is the IMU mounted near the center of mass?</div>
+      <p>
+        When the IMU is far from the robot's center of rotation, the accelerations caused by rotation also
+        enter its measurements, making the data noisier. That's why the IMU is usually mounted as close
+        as possible to the geometric/mass center of the body.
+      </p>
+    </div>
+
+    <p>Our TF tree structure now looks like this:</p>
+    <div class="mermaid">
+graph TD
+    F["base_footprint"] --> B["base_link"]
+    B --> LW["left_wheel_link"]
+    B --> RW["right_wheel_link"]
+    B --> C["caster_link"]
+    B --> L["laser_link"]
+    B --> I["imu_link"]
+    style F fill:#eafaf3,stroke:#0e9e6e
+    style B fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <p>This is exactly the same TF tree we'll discuss in full detail in Chapter 5.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="validate">
+    <h2><span class="num">4.8</span>Converting and validating the model</h2>
+    <p>A Xacro file is only useful once it's converted to pure URDF and validated. First, source the workspace:</p>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> xacro ~/archo_ws/src/archo_description/urdf/archo.urdf.xacro -o /tmp/archo.urdf
+<span class="term-prompt">dev@archo:~$</span> check_urdf /tmp/archo.urdf
+<span class="term-out">robot name is: archo
+---------- Successfully Parsed XML ---------------
+root Link: base_footprint has 1 child
+    child(1):  base_link
+        child(1): left_wheel_link
+        child(2): right_wheel_link
+        child(3): caster_link
+        child(4): laser_link
+        child(5): imu_link</span>
+      </div>
+    </div>
+
+    <p>To see the full structure diagram:</p>
+    <pre><code>cd /tmp && urdf_to_graphiz archo.urdf && xdg-open archo.pdf</code></pre>
+
+    <table>
+      <tr><th>Common error</th><th>Symptom</th><th>Solution</th></tr>
+      <tr><td>Unclosed XML tag</td><td><code>mismatched tag</code></td><td>Check the number of opening and closing tags</td></tr>
+      <tr><td>Undefined property (e.g. <code>base_lenght</code>)</td><td>Xacro error during conversion</td><td>Compare the property's spelling with its definition</td></tr>
+      <tr><td>Zero mass</td><td>Gazebo becomes unstable in the next chapter</td><td><code>mass</code> must always be positive</td></tr>
+      <tr><td>Wrong units (centimeters instead of meters)</td><td>Giant or microscopic robot</td><td>URDF always works in meters</td></tr>
+    </table>
+
+    <p>Finally, set up the files to be installed during build — add this section to <code>CMakeLists.txt</code>:</p>
+    <pre><code>install(
+  DIRECTORY urdf meshes launch rviz config
+  DESTINATION share/${PROJECT_NAME}
+)</code></pre>
+    <pre><code>cd ~/archo_ws
+colcon build --symlink-install --packages-select archo_description
+source install/setup.bash
+ros2 pkg prefix archo_description</code></pre>
+
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Chapter 4 checkpoint</strong>
+      <ul>
+        <li><code>xacro archo.urdf.xacro -o /tmp/archo.urdf</code> runs without errors.</li>
+        <li><code>check_urdf</code> outputs the message <code>Successfully Parsed XML</code>.</li>
+        <li>The link tree includes base_footprint, base_link, two wheels, caster, laser, and imu.</li>
+        <li><code>ros2 pkg prefix archo_description</code> returns the path of the installed package.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">4.9</span>Chapter 4 summary</h2>
+    <p>
+      For the first time, ARCHO went from being a name on paper to a valid geometric model: a body with
+      correct mass and inertia, two drive wheels connected with continuous-type joints, a caster wheel,
+      and defined mounting locations for the LiDAR and IMU. The robot still doesn't move at all and
+      doesn't exist in any virtual world yet — that's exactly what we'll do in the next chapter with
+      Gazebo.
+    </p>
+
+    <h3>Connection to the main project</h3>
+    <p><span class="badge-project">ARCHO project</span> now has a valid, validated <code>archo.urdf.xacro</code> file that will be used as the robot's physical foundation in all subsequent chapters — Gazebo, ros2_control, TF2, SLAM, and Nav2.</p>
+
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 5, we'll take a close look at the TF tree we just built with URDF: how ROS 2 tracks the position of each robot part relative to the others — and relative to the world.</p>
+
+    <h3>Chapter 4 glossary</h3>
+    <dl class="glossary">
+      <dt>URDF</dt><dd>Unified Robot Description Format; the standard format for describing a robot's physical structure in ROS.</dd>
+      <dt>Xacro</dt><dd>A layer on top of URDF that adds variables (properties), calculations, and macros.</dd>
+      <dt>Link</dt><dd>A rigid part of the robot (body, wheel, sensor).</dd>
+      <dt>Joint</dt><dd>The kinematic or fixed relationship between two links; common types: fixed, continuous, revolute.</dd>
+      <dt>base_footprint</dt><dd>A hypothetical frame on the ground surface, with no roll/pitch; the main reference for Navigation.</dd>
+      <dt>base_link</dt><dd>The robot body's main physical frame; the attachment point for other parts.</dd>
+      <dt>check_urdf</dt><dd>A command-line tool for validating the XML structure and link/joint tree of a URDF file.</dd>
+    </dl>
+
+    <h3>Chapter 4 common mistakes — summary</h3>
+    <ul>
+      <li>Forgetting half the body height in the joint between base_footprint and base_link.</li>
+      <li>Writing dimensions in centimeters instead of meters.</li>
+      <li>Zero mass or inertia, which causes unrealistic behavior in the next chapter's simulation.</li>
+      <li>Forgetting <code>axis xyz="0 1 0"</code> on the wheel joints.</li>
+      <li>Not rebuilding the package after changing the Xacro file.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 4 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: TF2 and Coordinate Frames →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

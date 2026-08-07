@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter Twelve — Behavior Tree and Lifecycle Nodes: The Intelligence Behind Nav2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.6em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  .lifecycle-badge{display:inline-block; padding:4px 12px; border-radius:999px; font-family:'JetBrains Mono', monospace; font-size:.82em; font-weight:600;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/Dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter Twelve: Behavior Tree and Lifecycle Nodes — The Intelligence Behind Nav2</h1>
+    <div class="subtitle">Where Nav2 stops being a linear program and starts thinking</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 11 (Navigation2)</div>
+      <div class="chip">Ongoing project: ARCHO robot</div>
+      <div class="chip">Concepts: BT, Lifecycle, Recovery</div>
+      <div class="chip">Reading time: 120–140 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#linear-problem"><span>12.1</span>The problem with linear programs</a>
+    <a href="#bt-def"><span>12.2</span>What a Behavior Tree is</a>
+    <a href="#bt-nodes"><span>12.3</span>The three main node types</a>
+    <a href="#bt-status"><span>12.4</span>Status and Tick</a>
+    <a href="#bt-real"><span>12.5</span>Nav2's real Behavior Tree for ARCHO</a>
+    <a href="#lifecycle"><span>12.6</span>Lifecycle Nodes: why ROS 2 differs from ROS 1</a>
+    <a href="#lifecycle-states"><span>12.7</span>Four main states of a Lifecycle Node</a>
+    <a href="#lifecycle-manager"><span>12.8</span>Lifecycle Manager: Nav2's project manager</a>
+    <a href="#summary"><span>12.9</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="linear-problem">
+    <h2><span class="num">12.1</span>The problem with linear programs</h2>
+    <p>Suppose you give ARCHO a mission: "Go to shelf number 12." Now, along the way, any of these could happen:</p>
+    <ul>
+      <li>A worker suddenly appears in front of it.</li>
+      <li>Its battery gets low.</li>
+      <li>The LiDAR stops working.</li>
+      <li>The path gets blocked.</li>
+      <li>The destination changes.</li>
+    </ul>
+    <p>If ARCHO's logic is just a simple linear program:</p>
+    <div class="mermaid">
+flowchart LR
+    A["Start"] --> B["Move"] --> C["Goal"]
+    style B fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why this isn't enough</div>
+      <p>
+        In a linear program, the first unexpected event stops the entire program. If you write <code>Move → Pick →
+        Return</code> and the first step fails, the whole chain collapses. But in the real world, an industrial
+        robot needs to be able to make decisions — not just execute.
+      </p>
+    </div>
+    <p>ROS 2's solution to this problem is a structure called a <strong>Behavior Tree</strong>.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="bt-def">
+    <h2><span class="num">12.2</span>What a Behavior Tree is</h2>
+    <div class="box def">
+      <div class="box-title">📖 Definition</div>
+      <p>
+        A Behavior Tree is a tree-shaped decision-making structure that lets a robot choose the best behavior
+        based on the environment's momentary conditions — instead of blindly executing a fixed chain of commands.
+      </p>
+    </div>
+    <div class="box idea">
+      <div class="box-title">🧠 A simple analogy</div>
+      <p>
+        When you leave the house in the morning, this happens in your mind: "Is it raining? If yes, take an
+        umbrella; if not, go without one." This is exactly a Behavior Tree — a condition, and depending on its
+        result, a different action.
+      </p>
+    </div>
+    <p>Because decisions branch, a tree structure makes sense:</p>
+    <div class="mermaid">
+flowchart TB
+    R["Mission"] --> A["Go To Goal"]
+    R --> B["Recharge Battery"]
+    R --> C["Wait"]
+    R --> D["Recover"]
+    style R fill:#eef0ff,stroke:#3d4bf5
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="bt-nodes">
+    <h2><span class="num">12.3</span>The three main node types</h2>
+    <p>Almost every real Behavior Tree is built from a combination of these three node types:</p>
+    <table>
+      <tr><th>Node Type</th><th>Function</th><th>Example</th></tr>
+      <tr><td><strong>Condition</strong></td><td>Only asks a question; the output is only Success or Failure</td><td>Battery OK? Goal Reached?</td></tr>
+      <tr><td><strong>Action</strong></td><td>Performs a real task</td><td>Compute Path, Follow Path, Rotate, Clear Costmap</td></tr>
+      <tr><td><strong>Control</strong></td><td>Decides which branch executes — the most important part of a BT</td><td>Sequence, Fallback, Parallel</td></tr>
+    </table>
+    <h3>Sequence Node (→)</h3>
+    <p>All steps must succeed one after another; if one fails, the rest never execute.</p>
+    <div class="mermaid">
+flowchart LR
+    S["Sequence →"] --> P1["Compute Path"] --> P2["Follow Path"] --> P3["Success"]
+    style S fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <h3>Fallback Node — or Selector (?)</h3>
+    <p>If the first option fails, the next one is tried.</p>
+    <div class="mermaid">
+flowchart TB
+    F["Navigate ?"] --> R1["Main Route"]
+    F --> R2["Secondary Route"]
+    F --> R3["Recovery"]
+    style F fill:#f4effe,stroke:#8b5cf6
+    </div>
+    <h3>Parallel Node</h3>
+    <p>Runs several tasks at once — ARCHO doesn't just move, it simultaneously monitors battery, LiDAR, and the goal.</p>
+    <div class="mermaid">
+flowchart TB
+    P["Parallel"] --> M1["Move"]
+    P --> M2["Monitor Battery"]
+    P --> M3["Watch Obstacles"]
+    style P fill:#eafaf3,stroke:#0e9e6e
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="bt-status">
+    <h2><span class="num">12.4</span>Status and Tick</h2>
+    <p>At any given moment, every node returns one of these three states:</p>
+    <table>
+      <tr><th>Status</th><th>Meaning</th></tr>
+      <tr><td><code>Success</code></td><td>The task was completed successfully</td></tr>
+      <tr><td><code>Failure</code></td><td>The task was not completed</td></tr>
+      <tr><td><code>Running</code></td><td>Still in progress — for example, ARCHO is still moving</td></tr>
+    </table>
+    <div class="box def">
+      <div class="box-title">📖 What a Tick is</div>
+      <p>
+        A Behavior Tree doesn't run just once; it's checked repeatedly and continuously (for example, 20 times
+        per second) from the root. Each check is called a <strong>Tick</strong>. On every Tick, the same
+        questions are asked again: Has the goal changed? Is there a new obstacle? Is the battery low? Is the
+        path still valid?
+      </p>
+    </div>
+    <div class="box eng">
+      <div class="box-title">🔧 Why a Behavior Tree beats a pile of if-else statements</div>
+      <p>
+        If you tried to write all these conditions with <code>if battery</code>, <code>if obstacle</code>, <code>if
+        planner</code>, <code>if recovery</code>, <code>if localization</code>, <code>if timeout</code>, and
+        <code>if sensor</code>, the code would very quickly turn into unmaintainable chaos. A Behavior Tree
+        organizes this same complexity into a visual, extensible structure.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="bt-real">
+    <h2><span class="num">12.5</span>Nav2's real Behavior Tree for ARCHO</h2>
+    <p>Simplified version:</p>
+    <div class="mermaid">
+flowchart LR
+    A["Navigate"] --> B["Compute Path"] --> C["Follow Path"] --> D["Goal Reached?"]
+    </div>
+    <p>But the real version that Nav2 executes has a more complete shape:</p>
+    <div class="mermaid">
+flowchart TB
+    N["Navigate"] --> C1["Compute Path"]
+    N --> C2["Follow Path"]
+    N --> C3["Check Goal"]
+    N --> C4["Check Battery"]
+    N --> C5["Replan"]
+    N --> C6["Recovery"]
+    style N fill:#eef0ff,stroke:#3d4bf5
+    style C6 fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <h3>Recovery Behavior: when the Planner gets stuck</h3>
+    <p>If the Global Planner can't find a path, the BT tries a recovery chain instead of collapsing:</p>
+    <div class="mermaid">
+flowchart TB
+    A["Rotate"] -->|failure| B["Backup"]
+    B -->|failure| C["Try Again"]
+    C -->|failure| D["Mission Failed"]
+    style D fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <h3>Replanning: when a forklift blocks an aisle</h3>
+    <p>
+      If the Planner had previously found a path through an aisle, but that aisle is now blocked, the Behavior
+      Tree decides on its own that the Planner should run again and compute a new path — without a single new
+      line of code being written.
+    </p>
+    <h3>Low battery example</h3>
+    <p>
+      If ARCHO's battery drops to 8%, the BT can decide — without the programmer writing hundreds of
+      <code>if</code> conditions — to cancel the mission and head to the charging station.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 ARCHO's complete mission with a BT</div>
+      <p>
+        The mission "go to shelf 12," in BT form, looks something like this: Battery OK? → Localization OK? →
+        Compute Path → Follow Path → Goal Reached? → Recovery. If a worker crosses the path midway, the Planner
+        recomputes the route and ARCHO continues; if that doesn't work either, Recovery kicks in — it backs up
+        a bit, tries again, or ultimately cancels the mission.
+      </p>
+    </div>
+    <div class="figure">
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect width="760" height="300" fill="#fffefb"/>
+        <rect x="12" y="12" width="736" height="276" rx="14" fill="#eef0ff" stroke="#d6dafc"/>
+        <text x="380" y="42" text-anchor="middle" fill="#2732b8" font-family="Inter, sans-serif" font-size="15" font-weight="700">Nav2's complete architecture with the Behavior Tree at its center</text>
+        <rect x="330" y="60" width="100" height="32" rx="8" fill="#fffefb" stroke="#3d4bf5"/>
+        <text x="380" y="81" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#211f1a">Goal</text>
+        <rect x="290" y="112" width="180" height="34" rx="8" fill="#3d4bf5"/>
+        <text x="380" y="134" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#fff" font-weight="700">Behavior Tree</text>
+        <rect x="120" y="168" width="140" height="32" rx="8" fill="#fffefb" stroke="#0e9e6e"/>
+        <text x="190" y="189" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#211f1a">Planner</text>
+        <rect x="310" y="168" width="140" height="32" rx="8" fill="#fffefb" stroke="#0e9e6e"/>
+        <text x="380" y="189" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#211f1a">Controller</text>
+        <rect x="500" y="168" width="140" height="32" rx="8" fill="#fffefb" stroke="#d64a3c"/>
+        <text x="570" y="189" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#211f1a">Recovery</text>
+        <line x1="380" y1="92" x2="380" y2="112" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="146" x2="190" y2="168" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="146" x2="380" y2="168" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="146" x2="570" y2="168" stroke="#7a7568" stroke-width="1.5"/>
+        <rect x="330" y="225" width="100" height="32" rx="8" fill="#fffefb" stroke="#c8862c"/>
+        <text x="380" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#211f1a">cmd_vel</text>
+        <line x1="190" y1="200" x2="380" y2="225" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="380" y1="200" x2="380" y2="225" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="570" y1="200" x2="380" y2="225" stroke="#7a7568" stroke-width="1.5"/>
+      </svg>
+      <figcaption>The Behavior Tree sits at the center of decision-making, and on every Tick decides whether the Planner, Controller, or Recovery should be active.</figcaption>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="lifecycle">
+    <h2><span class="num">12.6</span>Lifecycle Nodes: why ROS 2 differs from ROS 1</h2>
+    <p>Suppose you turn ARCHO on. Does it make sense for the LiDAR to start working immediately, the Planner to run, the Controller to issue commands, and the motors to move — without any guarantee that everything is healthy? Absolutely not.</p>
+    <div class="box idea">
+      <div class="box-title">🧠 Like an airplane's pre-flight checklist</div>
+      <p>
+        A pilot doesn't just hit the power button and take off. First the engine, fuel, hydraulic system, and
+        instruments are checked, and only then is takeoff cleared. ROS 2 implements exactly this same logic for
+        critical nodes.
+      </p>
+    </div>
+    <p>
+      In ROS 1, nodes usually only had two states: <code>Start</code> and <code>Running</code>. If something went
+      wrong, it was hard to manage because there was no controlled intermediate state. ROS 2 solved this with the
+      <strong>Lifecycle Node</strong>.
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 Definition</div>
+      <p>
+        A Lifecycle Node is a node with well-defined states that only becomes fully active once all the
+        necessary conditions are met — not the instant it's powered on.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="lifecycle-states">
+    <h2><span class="num">12.7</span>Four main states of a Lifecycle Node</h2>
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> Unconfigured: Create
+    Unconfigured --> Inactive: Configure()
+    Inactive --> Active: Activate()
+    Active --> Inactive: Deactivate()
+    Inactive --> Unconfigured: Cleanup()
+    Unconfigured --> Finalized: Shutdown()
+    Inactive --> Finalized: Shutdown()
+    Active --> Finalized: Shutdown()
+    Finalized --> [*]
+    </div>
+    <p style="font-size:.92em; color:var(--muted);">Note: in addition to these four main states (Unconfigured, Inactive, Active, Finalized), each transition between them (like Configure or Activate) actually passes through a temporary Transition State; these transition states are not shown in the simplified diagram above.</p>
+    <table>
+      <tr><th>State</th><th>Meaning</th><th>LiDAR Driver Example</th></tr>
+      <tr><td><span class="lifecycle-badge" style="background:#f1efe8;color:#7a7568;">Unconfigured</span></td><td>The node exists, but isn't ready to work yet</td><td>The serial port hasn't been opened yet</td></tr>
+      <tr><td><span class="lifecycle-badge" style="background:#fdf3e4;color:#c8862c;">Inactive</span></td><td>The node is ready but isn't doing anything yet</td><td>The LiDAR is ready but isn't publishing data yet</td></tr>
+      <tr><td><span class="lifecycle-badge" style="background:#eafaf3;color:#0e9e6e;">Active</span></td><td>The node is actually working — publishing topics, responding to services</td><td>LaserScan is published on /scan</td></tr>
+      <tr><td><span class="lifecycle-badge" style="background:#fdeeec;color:#d64a3c;">Finalized</span></td><td>The node has been fully and irreversibly shut down — reachable from all three other states</td><td>Complete system shutdown</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Why the Inactive state matters so much</div>
+      <p>
+        Suppose the Planner is ready but Localization isn't ready yet. If the Planner became active right now,
+        it would receive incorrect position data and generate wrong paths. The Inactive state lets the Planner
+        stay "ready but quiet" until it's actually its turn.
+      </p>
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why activation order matters</div>
+      <p>
+        If the Controller becomes active before Localization, ARCHO could move based on incorrect position
+        data — which, in a warehouse full of shelves and workers, is dangerous. The Lifecycle mechanism
+        controls exactly this order: LiDAR → TF → Localization → Costmap → Planner → Controller.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="lifecycle-manager">
+    <h2><span class="num">12.8</span>Lifecycle Manager: Nav2's project manager</h2>
+    <p>
+      In Navigation2, there's a central node called the <strong>Lifecycle Manager</strong> that acts like a
+      project manager: it coordinates Configure → Activate → Monitor → Shutdown for all the critical nodes.
+    </p>
+    <div class="mermaid">
+flowchart TB
+    LM["Lifecycle Manager"] --> A["Map Server"]
+    LM --> B["AMCL"]
+    LM --> C["Planner Server"]
+    LM --> D["Controller Server"]
+    LM --> E["BT Navigator"]
+    LM --> F["Behavior Server"]
+    style LM fill:#3d4bf5,color:#fff
+    </div>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#f66;"></div>
+        <div class="term-dot" style="background:#fc5;"></div>
+        <div class="term-dot" style="background:#6c6;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 lifecycle get /amcl
+<span class="term-out">active [3]</span>
+<span class="term-prompt">dev@archo:~$</span> ros2 lifecycle get /planner_server
+<span class="term-out">active [3]</span>
+<span class="term-prompt">dev@archo:~$</span> ros2 lifecycle set /planner_server deactivate
+<span class="term-out">Transitioning successful</span>
+      </div>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 A real industrial scenario</div>
+      <p>
+        The night shift starts at a factory. ARCHO powers on; the Lifecycle Manager checks that the LiDAR, IMU,
+        and encoders are healthy. AMCL becomes active and localizes the robot. The Planner and Controller
+        become active and ARCHO starts working. Midway through the shift, the LiDAR temporarily goes offline —
+        the Lifecycle Manager immediately moves the Planner and Controller to Inactive so ARCHO doesn't make a
+        dangerous move. Once the LiDAR is healthy again, the nodes are reactivated in the same logical order.
+        This behavior keeps the system predictable and safe.
+      </p>
+    </div>
+    <div class="box idea">
+      <div class="box-title">🧠 Behavior Tree and Lifecycle complement each other — they aren't the same thing</div>
+      <p>
+        The Behavior Tree decides <em>what</em> to do right now. Lifecycle decides which node is even
+        <em>allowed to run</em>. One is the brain of moment-to-moment decision-making; the other is the safety
+        framework for startup and shutdown.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">12.9</span>Chapter Twelve summary</h2>
+    <p>
+      Now the complete architecture of Navigation2 is clear to you: Localization, Map, Costmap, Global Planner,
+      and Local Controller (Chapter 11), together with the Behavior Tree that coordinates all of these, and
+      Lifecycle Nodes that guarantee each component only becomes active when it's truly ready. Together, these
+      six pieces let ARCHO cope in a real environment — with moving obstacles, route changes, sensor errors, and
+      unexpected conditions.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain the difference between Sequence, Fallback, and Parallel nodes with an example.</li>
+        <li>I know what a Tick is and why a BT doesn't run just once.</li>
+        <li>I can explain how Recovery Behavior prevents Planner failure.</li>
+        <li>I can name the four main states of a Lifecycle Node in order.</li>
+        <li>I know why the Lifecycle Manager is essential for safely starting up Nav2.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a complete Nav2 architecture: a BT Navigator that coordinates moment-to-moment decision-making, and a Lifecycle Manager that controls the safe startup order and recovery of all critical nodes.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter Thirteen we move on to MoveIt 2 — if ARCHO also has a robotic arm, this is where we learn how that arm plans its own motion.</p>
+    <h3>Chapter Twelve glossary</h3>
+    <dl class="glossary">
+      <dt>Behavior Tree (BT)</dt><dd>A tree-shaped structure for robot decision-making based on the environment's momentary conditions.</dd>
+      <dt>Sequence Node</dt><dd>A control node whose children must all succeed in order for it to succeed.</dd>
+      <dt>Fallback (Selector) Node</dt><dd>A control node that picks the first child that succeeds.</dd>
+      <dt>Tick</dt><dd>Each repeated, periodic check of the behavior tree from the root.</dd>
+      <dt>Recovery Behavior</dt><dd>An alternative behavior (like rotating or backing up) used when the main path fails.</dd>
+      <dt>Lifecycle Node</dt><dd>A node with well-defined states that only becomes active in a controlled order.</dd>
+      <dt>Lifecycle Manager</dt><dd>A management node that coordinates the Configure/Activate/Deactivate order of all Lifecycle Nodes.</dd>
+    </dl>
+    <h3>Chapter Twelve common mistakes — summary</h3>
+    <ul>
+      <li>Assuming all nodes are ready immediately after power-on.</li>
+      <li>Not having a Recovery Behavior, resulting in a full mission stop on the first error.</li>
+      <li>Activating the Controller before Localization has stabilized.</li>
+      <li>Ignoring the Lifecycle Manager's role when debugging a node that won't activate.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 12 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: MoveIt 2 — Arm Motion Planning →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

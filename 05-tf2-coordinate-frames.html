@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 5 — TF2 and Coordinate Frames</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 5: TF2 and Coordinate Frames</h1>
+    <div class="subtitle">How ARCHO knows where each of its parts is</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 4 (URDF/Xacro)</div>
+      <div class="chip">Ongoing project: ARCHO robot</div>
+      <div class="chip">Tools: tf2_echo, view_frames</div>
+      <div class="chip">Reading time: 80–100 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#big-picture"><span>5.1</span>Why a robot needs a coordinate system</a>
+    <a href="#tf-def"><span>5.2</span>Transform, Frame, and the TF Tree</a>
+    <a href="#static-dynamic"><span>5.3</span>Static vs. Dynamic Transforms</a>
+    <a href="#rsp"><span>5.4</span>robot_state_publisher: from URDF to live TF</a>
+    <a href="#chain"><span>5.5</span>The navigation chain: map → odom → base_link</a>
+    <a href="#inspect"><span>5.6</span>Inspecting TF from the command line</a>
+    <a href="#errors"><span>5.7</span>Common TF errors</a>
+    <a href="#summary"><span>5.8</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">5.1</span>Why a robot needs a coordinate system</h2>
+    <p>
+      In the previous chapter, ARCHO got a body: wheels, a caster wheel, mounting points for the LiDAR and IMU.
+      But one simple question is still unanswered: when the LiDAR says "there's an obstacle 2 meters from me,"
+      where exactly is "me"? And is that 2 meters measured from the center of the robot, the edge of the body,
+      or the LiDAR itself, mounted a few centimeters ahead of center?
+    </p>
+    <p>
+      This is exactly the problem <strong>TF2</strong> (the second version of ROS's Transform library) solves:
+      a standard system for tracking where every part of the robot is, at every moment, relative to the other
+      parts and relative to the surrounding world.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy</div>
+      <p>
+        Imagine you're in an office building and want to give someone directions. You could say "third floor,
+        room 12" (relative to the building), or "two steps past the elevator" (relative to a local point). Both
+        addresses are correct, just relative to different references. TF2 does exactly this for a robot: it
+        tells each part to define its position relative to its own "parent," and then automatically computes
+        where any point is relative to any other point.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="tf-def">
+    <h2><span class="num">5.2</span>Transform, Frame, and the TF Tree</h2>
+    <div class="box def">
+      <div class="box-title">📖 Definition</div>
+      <p>
+        A <strong>Frame</strong> (coordinate frame) is a reference point in space with a defined orientation —
+        for example <code>base_link</code> or <code>laser_link</code>. A <strong>Transform</strong> is the
+        geometric relationship (translation + rotation) between two Frames. The set of all Transforms for a
+        robot forms a <strong>tree</strong>: each Frame has exactly one parent, but can have multiple children.
+      </p>
+    </div>
+    <p>The current TF tree for ARCHO — exactly what we built with URDF in the previous chapter — looks like this:</p>
+    <div class="mermaid">
+graph TD
+    F["base_footprint<br/>on the ground"] --> B["base_link<br/>body center"]
+    B --> LW["left_wheel_link"]
+    B --> RW["right_wheel_link"]
+    B --> C["caster_link"]
+    B --> L["laser_link"]
+    B --> I["imu_link"]
+    style F fill:#eafaf3,stroke:#0e9e6e
+    style B fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <p>
+      When we ask "where is the LiDAR relative to the ground?", TF2 walks the path
+      <code>laser_link → base_link → base_footprint</code> and chains the Transforms together to produce the
+      final answer. You never have to do this calculation by hand yourself — that's exactly what TF2 does
+      behind the scenes for you.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="static-dynamic">
+    <h2><span class="num">5.3</span>Static vs. Dynamic Transforms</h2>
+    <p>In Chapter 4 we saw two types of joints: <code>fixed</code> for static connections (like the LiDAR mounted on the body), and <code>continuous</code> for moving connections (like the wheels). TF2 preserves exactly this distinction:</p>
+    <table>
+      <tr><th>Transform Type</th><th>Example in ARCHO</th><th>How it's published</th></tr>
+      <tr><td><strong>Static</strong></td><td><code>base_link → laser_link</code></td><td>Once, at startup; never changes</td></tr>
+      <tr><td><strong>Dynamic</strong></td><td><code>base_link → left_wheel_link</code></td><td>Republished every moment the wheel turns</td></tr>
+      <tr><td><strong>Dynamic (navigation)</strong></td><td><code>odom → base_link</code></td><td>Continuously updated as the robot moves</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering View</div>
+      <p>
+        Static Transforms are usually published with the <code>static_transform_publisher</code> tool or
+        directly from the URDF, and cost almost no processing overhead, since they're sent only once and cached
+        on the receiving end. Dynamic Transforms are published at a high rate (typically several times per
+        second), because their state is constantly changing.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="rsp">
+    <h2><span class="num">5.4</span>robot_state_publisher: from URDF to live TF</h2>
+    <p>
+      Now the practical question: who actually builds and publishes these Transforms from the Xacro file we
+      wrote in the previous chapter? The answer is a standard Node called <strong>robot_state_publisher</strong>.
+    </p>
+    <div class="mermaid">
+flowchart LR
+    A["Xacro/URDF<br/>fixed robot structure"] --> B["robot_description<br/>string parameter"]
+    B --> C["robot_state_publisher"]
+    D["/joint_states<br/>current angle of each Joint"] --> C
+    C --> E["Live TF tree"]
+    style C fill:#eef0ff,stroke:#3d4bf5,color:#211f1a,font-weight:bold
+    style E fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    </div>
+    <p>
+      This Node combines two things: the robot's fixed structure (from the URDF — which Link is attached to
+      which Joint) and the current angle of each Joint (from the <code>/joint_states</code> Topic — for
+      example, "the left wheel has now turned 45 degrees"). The result of this combination is a live TF tree
+      that updates every time the wheel angles change.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 ARCHO's complete motion loop</div>
+      <p>
+        When we get to Gazebo in the next chapter, this loop becomes complete: a <code>/cmd_vel</code> command
+        goes to <code>ros2_control</code>, Gazebo's wheels turn, the new Joint positions are published on
+        <code>/joint_states</code>, <code>robot_state_publisher</code> picks it up and updates the TF tree, and
+        finally RViz displays that same rotation on the model.
+      </p>
+    </div>
+    <p>A simple launch file to see this Node in action (with nothing else):</p>
+    <pre><code>from launch import LaunchDescription
+from launch.substitutions import Command
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
+from ament_index_python.packages import get_package_share_directory
+import os
+
+
+def generate_launch_description():
+    pkg_path = get_package_share_directory('archo_description')
+    xacro_file = os.path.join(pkg_path, 'urdf', 'archo.urdf.xacro')
+    robot_description = ParameterValue(
+        Command(['xacro ', xacro_file]), value_type=str)
+
+    return LaunchDescription([
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            parameters=[{'robot_description': robot_description}],
+        ),
+    ])</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="chain">
+    <h2><span class="num">5.5</span>The navigation chain: map → odom → base_link</h2>
+    <p>
+      The TF tree we've seen so far only covers the robot's fixed body. But for Nav2 (which we'll get to in
+      later chapters) to work, we need a larger chain:
+    </p>
+    <pre><code>map → odom → base_link → laser_link</code></pre>
+    <table>
+      <tr><th>Chain link</th><th>Who is responsible for publishing it</th></tr>
+      <tr><td><code>map → odom</code></td><td>SLAM or AMCL (Chapters 10 and 11)</td></tr>
+      <tr><td><code>odom → base_link</code></td><td>Odometry or robot_localization (Chapter 9)</td></tr>
+      <tr><td><code>base_link → laser_link</code></td><td>robot_state_publisher (this chapter)</td></tr>
+    </table>
+    <div class="box mistake">
+      <div class="box-title">⚠️ A strict TF2 rule</div>
+      <p>
+        No two Nodes should ever publish the same Transform at the same time. If, for example, both SLAM and
+        another Node try to publish <code>map → odom</code>, TF2 runs into a conflict and unpredictable
+        behavior follows. Each link in the chain has exactly one designated publisher.
+      </p>
+    </div>
+    <p>
+      Why is this chain designed in three pieces instead of one direct Transform from <code>map</code> to
+      <code>base_link</code>? Because each piece has a different rate and reliability: Odometry is fast and
+      smooth but accumulates error (drift) over time; SLAM/AMCL is slower but periodically corrects that error
+      by comparing against the map. Keeping these two layers separate makes both accuracy and stability
+      possible at the same time.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="inspect">
+    <h2><span class="num">5.6</span>Inspecting TF from the command line</h2>
+    <p>To see the relationship between two specific Frames:</p>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 run tf2_ros tf2_echo odom base_link
+<span class="term-out">At time 1732000012.4
+- Translation: [0.842, 0.113, 0.000]
+- Rotation: in Quaternion [0.000, 0.000, 0.071, 0.997]</span>
+      </div>
+    </div>
+    <p>And to see the entire TF tree as a visual diagram:</p>
+    <pre><code>ros2 run tf2_tools view_frames</code></pre>
+    <p>This command generates a PDF file showing the entire tree — from <code>map</code> down to the smallest sensor Frame — along with the rate at which each Transform is published and when it was last updated.</p>
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        After running <code>robot_state_publisher</code> with the URDF from the previous chapter, run
+        <code>tf2_echo base_link laser_link</code>. The Translation value should match the <code>origin</code>
+        you wrote in the <code>laser_joint</code> Joint — why?
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="errors">
+    <h2><span class="num">5.7</span>Common TF errors</h2>
+    <table>
+      <tr><th>Error</th><th>Common cause</th><th>Solution</th></tr>
+      <tr><td><code>Lookup would require extrapolation</code></td><td>Timestamps are out of sync, or TF is published late</td><td>Check the TF publish rate and the system clock</td></tr>
+      <tr><td>TF doesn't work in simulation but works correctly with real time</td><td>The <code>use_sim_time</code> Parameter isn't set</td><td>Set <code>use_sim_time: true</code> on all Nodes related to Gazebo</td></tr>
+      <tr><td>Two identical Transforms from two sources</td><td>Two Nodes are simultaneously publishing the same chain link</td><td>Keep only one publisher per chain link</td></tr>
+      <tr><td>Wrong Frame in RViz</td><td>The wrong Fixed Frame is selected</td><td>Set the Fixed Frame to <code>odom</code> or <code>map</code>, not <code>base_link</code></td></tr>
+    </table>
+    <div class="box idea">
+      <div class="box-title">🧠 Why use_sim_time matters</div>
+      <p>
+        When Gazebo is running, simulation time may progress slower or faster than real time (remember the
+        Real-Time Factor from the next chapter with Gazebo?). If a Node relies on the system's real clock while
+        TF is published based on simulation time, TF2's calculations will constantly run into extrapolation
+        errors. Setting <code>use_sim_time: true</code> tells all Nodes to use the same simulation clock.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">5.8</span>Chapter 5 Summary</h2>
+    <p>
+      Now ARCHO is no longer just a static body — it has a live coordinate system. We know how
+      <code>robot_state_publisher</code> combines the URDF and <code>/joint_states</code> to build the TF tree,
+      why the navigation chain is split into three separate links, and how to inspect every part of this system
+      with <code>tf2_echo</code> and <code>view_frames</code>.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning Checkpoint</strong>
+      <ul>
+        <li>I can explain the difference between a Frame and a Transform.</li>
+        <li>I know why Static and Dynamic Transforms are published at different rates.</li>
+        <li>I can say exactly which two inputs robot_state_publisher uses to build TF.</li>
+        <li>I know which Nodes fill in the chain map → odom → base_link → laser_link.</li>
+        <li>I can inspect a TF tree using tf2_echo and view_frames.</li>
+        <li>I know what use_sim_time is and why it's critical in simulation.</li>
+      </ul>
+    </div>
+    <h3>Connection to the main project</h3>
+    <p><span class="badge-project">ARCHO Project</span> can now publish its body's TF tree live with <code>robot_state_publisher</code> — a prerequisite we'll need immediately in the next chapter, when we bring ARCHO into the physical world of Gazebo.</p>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 6 we'll first "see" this same TF tree and robot model for the first time with RViz — the ROS 2 visual dashboard; then in Chapter 7 we'll enter Gazebo, where gravity, friction, and collisions truly act on ARCHO.</p>
+    <h3>Chapter 5 Glossary</h3>
+    <dl class="glossary">
+      <dt>TF2</dt><dd>The ROS 2 library for tracking the relative position of a robot's different Frames over time.</dd>
+      <dt>Frame</dt><dd>A reference point in space with a defined orientation, such as base_link or laser_link.</dd>
+      <dt>Transform</dt><dd>The geometric relationship (translation and rotation) between two Frames.</dd>
+      <dt>robot_state_publisher</dt><dd>The Node that combines the URDF and /joint_states to build a live TF tree.</dd>
+      <dt>/joint_states</dt><dd>The standard Topic that publishes the current angle or position of every moving Joint.</dd>
+      <dt>use_sim_time</dt><dd>A Parameter that tells a Node to use the simulation clock instead of the system's real clock.</dd>
+    </dl>
+    <h3>Chapter 5 Common Errors — Recap</h3>
+    <ul>
+      <li>Publishing the same Transform from two different Nodes.</li>
+      <li>Forgetting use_sim_time when working with Gazebo.</li>
+      <li>Choosing the wrong Fixed Frame (e.g. base_link instead of odom) in RViz.</li>
+      <li>Ignoring the "Lookup would require extrapolation" warning instead of checking the TF publish rate.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 5 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: RViz — the ROS 2 Visual Dashboard →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

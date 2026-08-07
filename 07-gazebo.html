@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 7 — Gazebo: ARCHO's Virtual Laboratory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 7: Gazebo — ARCHO's Virtual Laboratory</h1>
+    <div class="subtitle">Where gravity, friction, and collisions become real for the first time</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapters 4 through 6</div>
+      <div class="chip">Ongoing project: ARCHO robot</div>
+      <div class="chip">Tool: Gazebo (gz_ros2_control)</div>
+      <div class="chip">Reading time: 110 to 140 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#big-picture"><span>7.1</span>From seeing to living</a>
+    <a href="#physics"><span>7.2</span>What Gazebo actually simulates</a>
+    <a href="#world"><span>7.3</span>World: the virtual warehouse</a>
+    <a href="#connect"><span>7.4</span>Connecting ARCHO to Gazebo</a>
+    <a href="#spawn"><span>7.5</span>Spawning the robot</a>
+    <a href="#sensors"><span>7.6</span>Simulated sensors and noise</a>
+    <a href="#loop"><span>7.7</span>Closing the loop: from cmd_vel to real motion</a>
+    <a href="#summary"><span>7.8</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">7.1</span>From seeing to living</h2>
+    <p>
+      In the previous chapter, the golden sentence was: "RViz is the robot's information window." Now it's time
+      to complete the second sentence: <strong>Gazebo is the robot's virtual laboratory.</strong> The difference
+      between the two becomes clear with a simple experiment: if you place ARCHO one meter above the ground, in
+      RViz it will just stay suspended in the air — because RViz only displays what it receives over the network.
+      But in Gazebo, gravity is applied, ARCHO falls, and collides with the ground.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy</div>
+      <p>
+        If you've designed a car, CAD software only shows what it looks like. But a driving simulator shows
+        whether it moves, whether it tips over, whether it collides with a wall, whether the brakes work.
+        Gazebo does exactly this for ARCHO — before even a single real part is purchased or assembled.
+      </p>
+    </div>
+    <div class="mermaid">
+flowchart LR
+    A["URDF/Xacro<br/>Robot model"] --> B["Gazebo<br/>Physics engine"]
+    B --> C["Motion, collision,<br/>friction, gravity"]
+    C --> D["Simulated sensors"]
+    D --> E["ROS 2 Topics"]
+    E --> F["RViz / Nav2 / SLAM / ros2_control"]
+    style B fill:#eef0ff,stroke:#3d4bf5,color:#211f1a,font-weight:bold
+    style E fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="physics">
+    <h2><span class="num">7.2</span>What Gazebo actually simulates</h2>
+    <p>Gazebo has a full physics engine that computes the following:</p>
+    <table>
+      <tr><th>Physical concept</th><th>Effect on ARCHO</th></tr>
+      <tr><td>Gravity</td><td>If Collision or Inertia is wrong, the robot falls or sinks into the ground</td></tr>
+      <tr><td>Mass and inertia</td><td>The same values we calculated in Chapter 4 for the body and wheels</td></tr>
+      <tr><td>Friction</td><td>If it's too low, the wheel spins but the robot doesn't move (like driving on ice)</td></tr>
+      <tr><td>Contact (Collision)</td><td>Wheel-to-ground contact, body-to-warehouse-wall contact</td></tr>
+    </table>
+
+    <div class="box def">
+      <div class="box-title">📖 Real-Time Factor (RTF)</div>
+      <p>
+        The ratio of simulation speed to real time. <code>RTF = 1.0</code> means one second of simulation
+        equals exactly one real second. <code>RTF = 0.5</code> means the simulation runs at half real-time
+        speed — usually due to a heavy mesh, too many sensors, or weak hardware. For everyday testing, an
+        RTF close to 1 is ideal.
+      </p>
+    </div>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Simulation Step</div>
+      <p>
+        Gazebo computes physics in small time steps (e.g., 0.001 seconds). A smaller step means higher
+        accuracy but lower speed; a larger step means higher speed but lower accuracy. This is the same
+        trade-off we saw in Chapter 4 between a detailed Visual mesh and a simple Collision mesh — again,
+        we're dealing with the trade-off between accuracy and performance.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="world">
+    <h2><span class="num">7.3</span>World: the virtual warehouse</h2>
+    <p>
+      In Gazebo there isn't just a robot — we have a complete <strong>World</strong>: floor, walls, shelves,
+      lighting, and obstacles. The World file (extension <code>.sdf</code>, or the older <code>.world</code>)
+      describes this environment.
+    </p>
+    <pre><code>archo_ws/src/archo_gazebo/
+├── worlds/
+│   └── warehouse.world
+├── models/
+├── launch/
+└── config/</code></pre>
+
+    <div class="figure">
+      <svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect x="0" y="0" width="800" height="460" rx="14" fill="#1b1e27"/>
+        <rect x="0" y="0" width="800" height="34" rx="14" fill="#262a36"/>
+        <circle cx="20" cy="17" r="6" fill="#ff5f57"/><circle cx="40" cy="17" r="6" fill="#febc2e"/><circle cx="60" cy="17" r="6" fill="#28c840"/>
+        <text x="400" y="22" fill="#c7cbe0" font-size="12" font-family="Inter" text-anchor="middle">Gazebo — warehouse.world</text>
+
+        <rect x="0" y="34" width="800" height="426" fill="#2b3346"/>
+        <polygon points="0,320 800,320 800,460 0,460" fill="#3a4258"/>
+        <g stroke="#4a5473" stroke-width="1">
+          <line x1="0" y1="340" x2="800" y2="340"/><line x1="0" y1="370" x2="800" y2="370"/>
+          <line x1="0" y1="405" x2="800" y2="405"/><line x1="0" y1="445" x2="800" y2="445"/>
+          <line x1="120" y1="320" x2="40" y2="460"/><line x1="280" y1="320" x2="240" y2="460"/>
+          <line x1="440" y1="320" x2="440" y2="460"/><line x1="600" y1="320" x2="640" y2="460"/>
+          <line x1="720" y1="320" x2="800" y2="460"/>
+        </g>
+
+        <rect x="70" y="150" width="70" height="170" fill="#5b6484" stroke="#7a84a8" stroke-width="1.5"/>
+        <rect x="78" y="160" width="54" height="18" fill="#3a4258"/><rect x="78" y="188" width="54" height="18" fill="#3a4258"/>
+        <rect x="78" y="216" width="54" height="18" fill="#3a4258"/><rect x="78" y="244" width="54" height="18" fill="#3a4258"/>
+
+        <rect x="640" y="140" width="80" height="180" fill="#5b6484" stroke="#7a84a8" stroke-width="1.5"/>
+        <rect x="650" y="150" width="60" height="18" fill="#3a4258"/><rect x="650" y="180" width="60" height="18" fill="#3a4258"/>
+        <rect x="650" y="210" width="60" height="18" fill="#3a4258"/><rect x="650" y="240" width="60" height="18" fill="#3a4258"/>
+
+        <ellipse cx="400" cy="345" rx="55" ry="14" fill="#0b0d13" opacity="0.4"/>
+        <rect x="365" y="290" width="70" height="42" rx="6" fill="#3d4bf5" stroke="#8fa5ff" stroke-width="1.5"/>
+        <circle cx="372" cy="335" r="9" fill="#14161c"/><circle cx="428" cy="335" r="9" fill="#14161c"/>
+        <rect x="392" y="278" width="16" height="14" rx="3" fill="#0e9e6e"/>
+        <g stroke="#ff4d4d" stroke-width="1" opacity="0.8">
+          <line x1="400" y1="285" x2="300" y2="310"/><line x1="400" y1="285" x2="330" y2="230"/>
+          <line x1="400" y1="285" x2="470" y2="220"/><line x1="400" y1="285" x2="500" y2="310"/>
+          <line x1="400" y1="285" x2="400" y2="200"/>
+        </g>
+
+        <text x="400" y="440" fill="#7f89ad" font-size="11" font-family="Inter" text-anchor="middle">Warehouse floor with realistic friction, two metal shelving units, ARCHO scanning the environment with LiDAR</text>
+      </svg>
+      <figcaption>Figure 7.1 — Layout of the Gazebo scene: ARCHO inside a simulated warehouse with shelving units, while LiDAR rays scan the environment.</figcaption>
+    </div>
+    <p>
+      A simple <code>warehouse.world</code> can include a floor, a few walls, several metal shelving units, and
+      ambient lighting — exactly the scene in which ARCHO will need to build a map and find a path in later
+      chapters.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 Where the model comes from</div>
+      <p>
+        The typical model-building path: design in a CAD program → export a mesh → define it in URDF/Xacro
+        (Chapter 4) → load it into Gazebo. But here's the important point: URDF doesn't just define appearance;
+        for Gazebo to show correct physical behavior, the mass, inertia, collision, and joints must also be
+        valid — the very same ones we wrote carefully in Chapter 4.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="connect">
+    <h2><span class="num">7.4</span>Connecting ARCHO to Gazebo</h2>
+    <p>
+      For ROS 2 Jazzy, the standard path is <code>gz_ros2_control</code> (the new generation of Gazebo, not the
+      old Gazebo Classic). First, we install the required packages:
+    </p>
+    <pre><code>sudo apt update
+sudo apt install \
+  ros-jazzy-ros-gz \
+  ros-jazzy-gz-ros2-control \
+  ros-jazzy-ros2-control \
+  ros-jazzy-ros2-controllers</code></pre>
+
+    <p>Now inside <code>archo.urdf.xacro</code>, we tell each wheel joint what interface it has with Gazebo:</p>
+    <pre><code>&lt;ros2_control name="ArchoGazeboSystem" type="system"&gt;
+  &lt;hardware&gt;
+    &lt;plugin&gt;gz_ros2_control/GazeboSimSystem&lt;/plugin&gt;
+  &lt;/hardware&gt;
+  &lt;joint name="left_wheel_joint"&gt;
+    &lt;command_interface name="velocity"/&gt;
+    &lt;state_interface name="position"/&gt;
+    &lt;state_interface name="velocity"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="right_wheel_joint"&gt;
+    &lt;command_interface name="velocity"/&gt;
+    &lt;state_interface name="position"/&gt;
+    &lt;state_interface name="velocity"/&gt;
+  &lt;/joint&gt;
+&lt;/ros2_control&gt;
+
+&lt;gazebo&gt;
+  &lt;plugin
+    filename="gz_ros2_control-system"
+    name="gz_ros2_control::GazeboSimROS2ControlPlugin"&gt;
+    &lt;parameters&gt;$(find archo_bringup)/config/controllers.yaml&lt;/parameters&gt;
+  &lt;/plugin&gt;
+&lt;/gazebo&gt;</code></pre>
+
+    <table>
+      <tr><th>Concept</th><th>Meaning</th></tr>
+      <tr><td><code>command_interface</code></td><td>What we command this joint from the outside (here: velocity)</td></tr>
+      <tr><td><code>state_interface</code></td><td>What we read from this joint (position, actual velocity)</td></tr>
+    </table>
+    <p>
+      This block only defines the interface; exactly how we distribute the velocity command between the two
+      wheels — meaning the Controller itself — is the topic of the next chapter (ros2_control).
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="spawn">
+    <h2><span class="num">7.5</span>Spawning the robot</h2>
+    <p>The complete launch architecture follows these four stages:</p>
+    <div class="mermaid">
+flowchart TB
+    A["Launch Gazebo with warehouse.world"] --> B["Publish robot_description"]
+    B --> C["Spawn ARCHO inside the World"]
+    C --> D["Activate Controller Manager and Controllers"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style D fill:#eafaf3,stroke:#0e9e6e,color:#211f1a,font-weight:bold
+    </div>
+    <pre><code>ros2 launch ros_gz_sim gz_sim.launch.py gz_args:=warehouse.world
+ros2 run ros_gz_sim create -topic robot_description -name archo -z 0.2</code></pre>
+    <p>After the robot appears, check that the controllers have activated:</p>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 control list_controllers
+<span class="term-out">joint_state_broadcaster   active
+diff_drive_controller    active</span>
+      </div>
+    </div>
+    <p>If they didn't activate automatically:</p>
+    <pre><code>ros2 run controller_manager spawner joint_state_broadcaster
+ros2 run controller_manager spawner diff_drive_controller</code></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="sensors">
+    <h2><span class="num">7.6</span>Simulated sensors and noise</h2>
+    <p>
+      One of Gazebo's best capabilities is sensor simulation — LiDAR, camera, IMU, and encoders. We define
+      ARCHO's LiDAR on the same <code>laser_link</code> we built in Chapter 4:
+    </p>
+    <pre><code>&lt;gazebo reference="laser_link"&gt;
+  &lt;sensor name="lidar_sensor" type="gpu_lidar"&gt;
+    &lt;topic&gt;scan&lt;/topic&gt;
+    &lt;update_rate&gt;10&lt;/update_rate&gt;
+    &lt;lidar&gt;
+      &lt;scan&gt;
+        &lt;horizontal&gt;
+          &lt;samples&gt;720&lt;/samples&gt;
+          &lt;min_angle&gt;-3.14159&lt;/min_angle&gt;
+          &lt;max_angle&gt;3.14159&lt;/max_angle&gt;
+        &lt;/horizontal&gt;
+      &lt;/scan&gt;
+      &lt;range&gt;
+        &lt;min&gt;0.10&lt;/min&gt;
+        &lt;max&gt;12.0&lt;/max&gt;
+        &lt;resolution&gt;0.01&lt;/resolution&gt;
+      &lt;/range&gt;
+    &lt;/lidar&gt;
+    &lt;always_on&gt;true&lt;/always_on&gt;
+  &lt;/sensor&gt;
+&lt;/gazebo&gt;</code></pre>
+    <pre><code>ros2 topic list | grep scan
+ros2 topic hz /scan</code></pre>
+
+    <div class="box def">
+      <div class="box-title">📖 Why we deliberately add noise</div>
+      <p>
+        In the real world, no sensor is perfect — a LiDAR might measure a distance of 2.000 meters as 1.994 or
+        2.006. If the simulation has no noise at all, algorithms that are tested and tuned against it may fail
+        when transferred to the real robot. Gazebo lets you add controlled noise to LiDAR, IMU, and camera
+        sensors so the simulation stays closer to reality.
+      </p>
+    </div>
+
+    <div class="box real">
+      <div class="box-title">🌍 Nav2 and SLAM don't care</div>
+      <p>
+        Important point: algorithms like SLAM Toolbox or Nav2, which we'll see in later chapters, have no idea
+        whether the LiDAR is real or virtual. They just listen to the <code>/scan</code> topic with message
+        type <code>sensor_msgs/LaserScan</code>. This is exactly what makes Gazebo such a powerful tool for
+        development without real hardware.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="loop">
+    <h2><span class="num">7.7</span>Closing the loop: from cmd_vel to real motion</h2>
+    <p>Now everything is ready to see the complete loop of ARCHO's motion:</p>
+    <div class="mermaid">
+flowchart TB
+    A["/cmd_vel<br/>Velocity command (manual or Nav2)"] --> B["diff_drive_controller"]
+    B --> C["ros2_control"]
+    C --> D["Gazebo wheels"]
+    D --> E["Real robot motion in the World"]
+    E --> F["/joint_states"]
+    F --> G["robot_state_publisher"]
+    G --> H["TF Tree"]
+    H --> I["RViz"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style I fill:#eafaf3,stroke:#0e9e6e,color:#211f1a,font-weight:bold
+    </div>
+    <p>For a manual test, send a straight-line motion command:</p>
+    <pre><code>ros2 topic pub /diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
+  "{twist: {linear: {x: 0.3}, angular: {z: 0.0}}}"</code></pre>
+    <p>And for a turn:</p>
+    <pre><code>ros2 topic pub /diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
+  "{twist: {linear: {x: 0.0}, angular: {z: 0.7}}}"</code></pre>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Behind the scenes of Differential Drive</div>
+      <p>
+        When you tell the robot "move forward at a linear speed of 0.4 meters per second," in reality the speed
+        of each of the two wheels must be computed separately. If <code>v</code> is the linear speed,
+        <code>ω</code> the angular speed, <code>L</code> the distance between the wheels, and <code>r</code>
+        the wheel radius:
+      </p>
+      <pre><code>ω_left  = (v − ωL/2) / r
+ω_right = (v + ωL/2) / r</code></pre>
+      <p>
+        For example, with <code>v=0.4</code>, <code>ω=0</code>, <code>L=0.4</code>, <code>r=0.08</code>, both
+        wheels must rotate at 5 radians per second. We don't write this calculation ourselves —
+        <code>diff_drive_controller</code> performs this conversion for us in the next chapter.
+      </p>
+    </div>
+
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Chapter 7 Checkpoint</strong>
+      <ul>
+        <li>ARCHO stands on the ground in Gazebo; it neither falls through, nor explodes, nor floats.</li>
+        <li><code>ros2 control list_controllers</code> shows both controllers as active.</li>
+        <li>A manual cmd_vel command causes the robot to actually move in the World.</li>
+        <li><code>/scan</code> is publishing, and LiDAR points are visible in RViz.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">7.8</span>Chapter 7 summary</h2>
+    <p>
+      ARCHO is no longer just a static model — it now lives in a physical world, feels its own weight, collides
+      with the warehouse floor, and for the first time actually moves with a <code>cmd_vel</code> command. Its
+      LiDAR publishes realistic (noisy) data on <code>/scan</code> — the very topic and concept that SLAM and
+      Nav2 will build on in later chapters.
+    </p>
+    <h3>Connection to the main project</h3>
+    <p><span class="badge-project">ARCHO Project</span> now has a new package — <code>archo_gazebo</code> — with a warehouse world and a full connection to physics. We're still sending velocity commands manually; the next chapter shows how <code>ros2_control</code> correctly distributes these commands between the two wheels.</p>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 8, we'll take a close look at the <code>ros2_control</code> layer: the Controller Manager, the types of controllers, and the detailed configuration of the <code>diff_drive_controller</code> that we saw briefly today.</p>
+    <h3>Chapter 7 glossary</h3>
+    <dl class="glossary">
+      <dt>Gazebo</dt><dd>A physics simulator for the robot and its environment; it computes gravity, mass, friction, collisions, and sensors.</dd>
+      <dt>World</dt><dd>The file describing the simulation environment — floor, walls, objects, lighting.</dd>
+      <dt>Real-Time Factor (RTF)</dt><dd>The ratio of simulation speed to real time.</dd>
+      <dt>gz_ros2_control</dt><dd>The official plugin that connects ros2_control to Gazebo's physics engine.</dd>
+      <dt>command_interface / state_interface</dt><dd>The input (command) and output (actual state) interfaces of each joint in ros2_control.</dd>
+      <dt>Spawn</dt><dd>The act of placing a robot model (from robot_description) inside a running World.</dd>
+    </dl>
+    <h3>Chapter 7 common mistakes — recap</h3>
+    <ul>
+      <li>Using Gazebo Classic instead of gz_ros2_control on ROS 2 Jazzy.</li>
+      <li>Forgetting to install <code>ros-jazzy-ros2-controllers</code> and seeing a Controller not found error.</li>
+      <li>Spawning the robot with zero initial height, causing it to get stuck inside the ground (instead of using <code>-z 0.2</code>).</li>
+      <li>Expecting SLAM/Nav2 to work without real data from /scan, while the controller is not yet active.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 7 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: ros2_control — From Command to Motion →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

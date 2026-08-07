@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3 — Practical Communication with ARCHO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Textbook</div>
+    <h1>Chapter 3: Practical Communication with ARCHO</h1>
+    <div class="subtitle">From concept to real code — Publisher, Service, Action, and Launch</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapters 1 and 2</div>
+      <div class="chip">Running project: ARCHO robot</div>
+      <div class="chip">Language: Python (rclpy)</div>
+      <div class="chip">Reading time: 100 to 130 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#big-picture"><span>3.1</span>From a Quiet Node to a Chatty Team</a>
+    <a href="#pubsub"><span>3.2</span>A Real Publisher and Subscriber</a>
+    <a href="#interfaces"><span>3.3</span>Building a Custom Message</a>
+    <a href="#service"><span>3.4</span>Service in Practice: Reset Encoder</a>
+    <a href="#action"><span>3.5</span>Action in Practice: Go to Shelf</a>
+    <a href="#parameter"><span>3.6</span>Parameters in Practice</a>
+    <a href="#launch"><span>3.7</span>A Launch File That Starts Everything</a>
+    <a href="#summary"><span>3.8</span>Summary, Glossary, and Exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">3.1</span>From a Quiet Node to a Chatty Team</h2>
+    <p>
+      In Chapter 2, <code>simple_node</code> just printed a single sentence and stayed quiet. That was fine for learning
+      the basic structure, but a real robot like ARCHO doesn't work that way. Its battery needs to announce its status
+      every few seconds, someone needs to be able to ask the motor to zero the encoders, and when the command "go to
+      shelf 12" arrives, the robot actually needs to move and report progress. In this chapter, we turn exactly the
+      same four communication tools from Chapter 1 — Topic, Service, Action, and Parameter — into real code for the
+      first time.
+    </p>
+    <div class="mermaid">
+flowchart RL
+    A["Publisher/Subscriber<br/>battery_monitor"] --> B["Custom Message<br/>archo_interfaces"]
+    B --> C["Service<br/>reset_encoder"]
+    C --> D["Action<br/>move_to_shelf"]
+    D --> E["Parameter YAML"]
+    E --> F["Single Launch File<br/>archo_bringup.launch.py"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style F fill:#eafaf3,stroke:#0e9e6e,color:#211f1a,font-weight:bold
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Today's Map for the ARCHO Team</div>
+      <p>
+        Today we're building three new nodes: <code>battery_monitor</code> (publishes battery status),
+        <code>dashboard</code> (a simple subscriber that displays the status), and <code>motor_controller</code>
+        (a server that both offers a service and runs an action). By the end of the chapter, all of these will be
+        started with a single command.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="pubsub">
+    <h2><span class="num">3.2</span>A Real Publisher and Subscriber</h2>
+    <p>
+      First we'll build the simplest case: a node that publishes ARCHO's battery status every second. We'll start
+      with the standard <code>std_msgs/Float32</code> message so that in the next section we can see why this isn't
+      enough in the real world.
+    </p>
+    <pre><code># archo_bringup/battery_monitor.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32
+import random
+
+
+class BatteryMonitor(Node):
+    def __init__(self):
+        super().__init__('battery_monitor')
+        self.publisher_ = self.create_publisher(Float32, 'battery_level', 10)
+        self.timer = self.create_timer(1.0, self.publish_battery)
+        self.level = 100.0
+
+    def publish_battery(self):
+        self.level = max(0.0, self.level - random.uniform(0.05, 0.2))
+        msg = Float32()
+        msg.data = self.level
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Battery: {self.level:.1f}%')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    rclpy.spin(BatteryMonitor())
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()</code></pre>
+
+    <p>Three things here are new compared to the previous chapter:</p>
+    <table>
+      <tr><th>Line</th><th>Meaning</th></tr>
+      <tr><td><code>create_publisher(Float32, 'battery_level', 10)</code></td><td>Creates a publisher on a topic named <code>battery_level</code> with message type <code>Float32</code>; the number 10 is the queue depth of retained messages (QoS queue depth)</td></tr>
+      <tr><td><code>create_timer(1.0, self.publish_battery)</code></td><td>Automatically calls the <code>publish_battery</code> function every 1 second</td></tr>
+      <tr><td><code>self.publisher_.publish(msg)</code></td><td>Actually publishes the message onto the ROS 2 network</td></tr>
+    </table>
+
+    <p>Now let's build the subscriber — a simple dashboard that listens on the same topic:</p>
+    <pre><code># archo_bringup/dashboard.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32
+
+
+class Dashboard(Node):
+    def __init__(self):
+        super().__init__('dashboard')
+        self.subscription = self.create_subscription(
+            Float32, 'battery_level', self.battery_callback, 10)
+
+    def battery_callback(self, msg):
+        if msg.data < 20.0:
+            self.get_logger().warning(f'Low battery: {msg.data:.1f}%')
+        else:
+            self.get_logger().info(f'Dashboard sees: {msg.data:.1f}%')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    rclpy.spin(Dashboard())
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()</code></pre>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Key Point: There Is No Direct Connection</div>
+      <p>
+        Notice that <code>battery_monitor.py</code> and <code>dashboard.py</code> never know each other's names
+        anywhere. Neither knows the other exists. The only thing that connects them is agreement on a shared name:
+        <code>battery_level</code>. This is exactly the node independence we described in Chapter 1 — you can close
+        <code>dashboard</code>, reopen it, or run ten copies of it, without <code>battery_monitor</code> ever
+        noticing.
+      </p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 run archo_bringup battery_monitor
+<span class="term-out">[INFO] [battery_monitor]: Battery: 99.9%
+[INFO] [battery_monitor]: Battery: 99.7%</span>
+
+<span class="term-prompt">dev@archo:~$</span> ros2 topic echo /battery_level
+<span class="term-out">data: 99.7
+---
+data: 99.5
+---</span>
+
+<span class="term-prompt">dev@archo:~$</span> ros2 topic hz /battery_level
+<span class="term-out">average rate: 1.001</span>
+      </div>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        Run both nodes in two separate terminals, then use <code>ros2 topic echo /battery_level</code> in a third
+        terminal to check that messages are actually being published. Then close <code>dashboard</code> and run it
+        again — does <code>battery_monitor</code> need to be run again? Why?
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="interfaces">
+    <h2><span class="num">3.3</span>Building a Custom Message</h2>
+    <p>
+      A raw number like <code>Float32</code> isn't enough for the battery. The ARCHO team wants to send the battery
+      percentage, voltage, and whether it's charging, all at once. This is where we build a <strong>custom
+      message</strong> — exactly as we became familiar with <code>sensor_msgs/LaserScan</code> in Chapter 1, but this
+      time we design our own format.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Why a Custom Message in a Separate Package?</div>
+      <p>
+        A common convention in ROS 2 is to keep custom message, service, and action definitions in a separate
+        package — usually with an <code>_interfaces</code> suffix — so that both the logic package
+        (<code>archo_bringup</code>) and any other package that wants to use the same format can import it without
+        an unnecessary dependency on executable code.
+      </p>
+    </div>
+
+    <pre><code>archo_ws/src/
+├── archo_interfaces/
+│   ├── msg/
+│   │   └── BatteryStatus.msg
+│   ├── srv/
+│   │   └── ResetEncoder.srv
+│   ├── action/
+│   │   └── MoveToShelf.action
+│   ├── CMakeLists.txt
+│   └── package.xml
+└── archo_bringup/</code></pre>
+
+    <p>The <code>BatteryStatus.msg</code> file defines the message structure in plain form:</p>
+    <pre><code># archo_interfaces/msg/BatteryStatus.msg
+float32 percentage
+float32 voltage
+bool is_charging</code></pre>
+
+    <p>
+      This file is just a form, not executable code. When you build this package, ROS 2 automatically generates the
+      corresponding Python and C++ classes. After building, you can import and use it in Python code like this:
+    </p>
+    <pre><code>from archo_interfaces.msg import BatteryStatus
+
+msg = BatteryStatus()
+msg.percentage = 87.5
+msg.voltage = 24.1
+msg.is_charging = False
+self.publisher_.publish(msg)</code></pre>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common Mistake</div>
+      <p>
+        After adding or changing a <code>.msg</code> file, don't forget to rebuild:
+        <code>colcon build --packages-select archo_interfaces</code> and then
+        <code>source install/setup.bash</code>. Until you do this, Python cannot find
+        <code>archo_interfaces.msg</code> and will raise an import error.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Medium Exercise</div>
+      <p>
+        Add a <code>string battery_health</code> field to <code>BatteryStatus.msg</code> (for example with values
+        <code>"good"</code>, <code>"warning"</code>, <code>"replace"</code>) and modify <code>battery_monitor.py</code>
+        so that when the battery percentage drops below 20, it sends <code>battery_health</code> as
+        <code>"warning"</code>.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="service">
+    <h2><span class="num">3.4</span>Service in Practice: Reset Encoder</h2>
+    <p>
+      Remember in Chapter 1 we said a service is for tasks that happen just once and on request? "Zeroing the wheel
+      encoders" is exactly one of those tasks. First we define the service format:
+    </p>
+    <pre><code># archo_interfaces/srv/ResetEncoder.srv
+---
+bool success
+string message</code></pre>
+    <p>
+      The <code>---</code> line separates the request from the response. Here the request is empty (only the call
+      itself is needed, we don't send any data), but the response has two fields: whether it succeeded, and an
+      explanatory message.
+    </p>
+
+    <h4>Server Side</h4>
+    <pre><code># archo_bringup/motor_controller.py (Service section)
+import rclpy
+from rclpy.node import Node
+from archo_interfaces.srv import ResetEncoder
+
+
+class MotorController(Node):
+    def __init__(self):
+        super().__init__('motor_controller')
+        self.encoder_ticks = 15420
+        self.srv = self.create_service(
+            ResetEncoder, 'reset_encoder', self.handle_reset)
+
+    def handle_reset(self, request, response):
+        self.get_logger().info(f'Resetting encoder from {self.encoder_ticks} ticks')
+        self.encoder_ticks = 0
+        response.success = True
+        response.message = 'Encoder reset to zero'
+        return response</code></pre>
+
+    <h4>Client Side (from the command line, for quick testing)</h4>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 service list
+<span class="term-out">/reset_encoder</span>
+
+<span class="term-prompt">dev@archo:~$</span> ros2 service call /reset_encoder archo_interfaces/srv/ResetEncoder "{}"
+<span class="term-out">response:
+archo_interfaces.srv.ResetEncoder_Response(success=True, message='Encoder reset to zero')</span>
+      </div>
+    </div>
+
+    <p>And the same request from within another Python node (for example, a maintenance tool):</p>
+    <pre><code>client = self.create_client(ResetEncoder, 'reset_encoder')
+while not client.wait_for_service(timeout_sec=1.0):
+    self.get_logger().info('Waiting for reset_encoder service...')
+
+request = ResetEncoder.Request()
+future = client.call_async(request)</code></pre>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Perspective: Why call_async?</div>
+      <p>
+        Calling a service in Python is usually done asynchronously so that the node doesn't lock up while waiting for
+        the response, and can keep listening to other topics at the same time. This is one of the important
+        differences between writing a simple script and writing a real, multitasking node.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Medium Exercise</div>
+      <p>
+        Design a new service called <code>emergency_stop</code> (the <code>.srv</code> file and the server-side
+        implementation). The request can be empty; the response should indicate whether the stop succeeded or not.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="action">
+    <h2><span class="num">3.5</span>Action in Practice: Go to Shelf</h2>
+    <p>
+      Now let's tackle something that actually takes time: the command "go to shelf 12." The action format has three
+      parts — Goal, Feedback, and Result — and they're all written in one file, in that order:
+    </p>
+    <pre><code># archo_interfaces/action/MoveToShelf.action
+int32 shelf_number
+---
+bool success
+string final_message
+---
+float32 distance_remaining
+string status</code></pre>
+
+    <h4>Action Server Side</h4>
+    <pre><code># archo_bringup/motor_controller.py (Action section)
+import time
+from rclpy.action import ActionServer
+from archo_interfaces.action import MoveToShelf
+
+
+class MotorController(Node):
+    def __init__(self):
+        super().__init__('motor_controller')
+        # ... the previous Service code also stays here ...
+        self._action_server = ActionServer(
+            self, MoveToShelf, 'move_to_shelf', self.execute_move)
+
+    def execute_move(self, goal_handle):
+        target = goal_handle.request.shelf_number
+        self.get_logger().info(f'Moving to shelf {target}')
+        distance = 18.0
+        feedback = MoveToShelf.Feedback()
+
+        while distance > 0:
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                result = MoveToShelf.Result()
+                result.success = False
+                result.final_message = 'Cancelled mid-route'
+                return result
+
+            distance -= 3.0
+            feedback.distance_remaining = max(distance, 0.0)
+            feedback.status = 'moving'
+            goal_handle.publish_feedback(feedback)
+            time.sleep(0.5)
+
+        goal_handle.succeed()
+        result = MoveToShelf.Result()
+        result.success = True
+        result.final_message = f'Arrived at shelf {target}'
+        return result</code></pre>
+
+    <div class="mermaid">
+sequenceDiagram
+    participant C as Client (Mission Manager)
+    participant S as Action Server (motor_controller)
+    C->>S: Goal: shelf_number = 12
+    S-->>C: Feedback: distance_remaining = 15.0
+    S-->>C: Feedback: distance_remaining = 9.0
+    S-->>C: Feedback: distance_remaining = 3.0
+    Note over C,S: The client can send Cancel Goal at any moment
+    S-->>C: Result: success = true, "Arrived at shelf 12"
+    </div>
+
+    <p>And from the command line, for quick testing without writing any client code:</p>
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 action send_goal /move_to_shelf archo_interfaces/action/MoveToShelf "{shelf_number: 12}" --feedback
+<span class="term-out">Feedback: distance_remaining: 15.0, status: moving
+Feedback: distance_remaining: 9.0, status: moving
+Feedback: distance_remaining: 3.0, status: moving
+Result: success: True, final_message: 'Arrived at shelf 12'</span>
+      </div>
+    </div>
+
+    <div class="box real">
+      <div class="box-title">🌍 Why This Design Matters for the Warehouse</div>
+      <p>
+        In the next chapter, when we install Nav2 on ARCHO, this exact pattern — Goal/Feedback/Result with cancel
+        support — will be the core infrastructure for the robot's autonomous movement; Nav2's official action,
+        called <code>NavigateToPose</code>, follows this same structure, just with a more realistic goal and
+        feedback (a target pose, actual remaining distance from the map).
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        Write a scenario in which a client sends a <code>MoveToShelf</code> goal, but partway through (when
+        <code>distance_remaining</code> reaches 9) requests a cancel. State what the final result value will be and
+        why.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="parameter">
+    <h2><span class="num">3.6</span>Parameters in Practice</h2>
+    <p>
+      Now let's turn ARCHO's default movement speed into a parameter instead of writing it as a constant in the code:
+    </p>
+    <pre><code>class MotorController(Node):
+    def __init__(self):
+        super().__init__('motor_controller')
+        self.declare_parameter('max_speed', 0.8)
+        self.declare_parameter('wheel_radius', 0.05)
+
+    def get_max_speed(self):
+        return self.get_parameter('max_speed').get_parameter_value().double_value</code></pre>
+
+    <p>And the corresponding YAML file, loaded at launch:</p>
+    <pre><code># config/motor_params.yaml
+motor_controller:
+  ros__parameters:
+    max_speed: 0.8
+    wheel_radius: 0.05</code></pre>
+
+    <div class="term">
+      <div class="term-bar"><div class="term-dot" style="background:#ff5f57;"></div><div class="term-dot" style="background:#febc2e;"></div><div class="term-dot" style="background:#28c840;"></div></div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 param list
+<span class="term-out">/motor_controller:
+  max_speed
+  wheel_radius</span>
+
+<span class="term-prompt">dev@archo:~$</span> ros2 param set /motor_controller max_speed 0.5
+<span class="term-out">Set parameter successful</span>
+      </div>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        Add a parameter called <code>low_battery_threshold</code> (default 20.0) to <code>battery_monitor</code>,
+        and use it instead of the hardcoded value 20 from the exercise in section 3.3.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="launch">
+    <h2><span class="num">3.7</span>A Launch File That Starts Everything</h2>
+    <p>Now let's connect the three nodes, the parameter file, and everything else with a single launch file:</p>
+    <pre><code># launch/archo_comms.launch.py
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    params_file = os.path.join(
+        get_package_share_directory('archo_bringup'),
+        'config', 'motor_params.yaml')
+
+    return LaunchDescription([
+        Node(
+            package='archo_bringup',
+            executable='battery_monitor',
+        ),
+        Node(
+            package='archo_bringup',
+            executable='dashboard',
+        ),
+        Node(
+            package='archo_bringup',
+            executable='motor_controller',
+            parameters=[params_file],
+        ),
+    ])</code></pre>
+    <pre><code>ros2 launch archo_bringup archo_comms.launch.py</code></pre>
+    <p>
+      With one command, all three nodes above come up: <code>battery_monitor</code> starts publishing,
+      <code>dashboard</code> starts listening, and <code>motor_controller</code> prepares both the
+      <code>reset_encoder</code> service and the <code>move_to_shelf</code> action, with parameters loaded from
+      the YAML file.
+    </p>
+
+    <div class="figure">
+      <svg viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect x="300" y="16" width="180" height="46" rx="12" fill="#eef0ff" stroke="#3d4bf5" stroke-width="2"/>
+        <text x="390" y="45" fill="#2732b8" font-size="14" font-family="Inter" text-anchor="middle" font-weight="700">archo_comms.launch.py</text>
+
+        <line x1="390" y1="62" x2="120" y2="110" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="390" y1="62" x2="390" y2="110" stroke="#7a7568" stroke-width="1.5"/>
+        <line x1="390" y1="62" x2="660" y2="110" stroke="#7a7568" stroke-width="1.5"/>
+
+        <rect x="30" y="110" width="180" height="60" rx="12" fill="#fffefb" stroke="#e6e1d6" stroke-width="2"/>
+        <text x="120" y="135" fill="#211f1a" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">battery_monitor</text>
+        <text x="120" y="155" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Publisher</text>
+
+        <rect x="300" y="110" width="180" height="60" rx="12" fill="#fffefb" stroke="#e6e1d6" stroke-width="2"/>
+        <text x="390" y="135" fill="#211f1a" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">dashboard</text>
+        <text x="390" y="155" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Subscriber</text>
+
+        <rect x="570" y="110" width="180" height="60" rx="12" fill="#fdf3e4" stroke="#c8862c" stroke-width="2"/>
+        <text x="660" y="132" fill="#211f1a" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">motor_controller</text>
+        <text x="660" y="150" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Service + Action</text>
+
+        <line x1="120" y1="170" x2="390" y2="220" stroke="#0e9e6e" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <text x="255" y="200" fill="#0e9e6e" font-size="11" font-family="Inter" text-anchor="middle">/battery_level</text>
+
+        <rect x="530" y="220" width="220" height="50" rx="10" fill="#f1efe8" stroke="#e6e1d6" stroke-width="1.5"/>
+        <text x="640" y="250" fill="#211f1a" font-size="12" font-family="Inter" text-anchor="middle">motor_params.yaml → Parameters</text>
+        <line x1="660" y1="220" x2="660" y2="170" stroke="#c8862c" stroke-width="1.5" stroke-dasharray="4,3"/>
+      </svg>
+      <figcaption>Figure 3.1 — One launch file, three independent nodes connected by a topic, service/action, and parameters.</figcaption>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        Add a launch argument called <code>use_sim</code> (default <code>false</code>) that, when set to
+        <code>true</code>, also runs an extra node called <code>fake_battery_drain</code>. (Hint:
+        <code>DeclareLaunchArgument</code> and <code>condition=IfCondition(...)</code>)
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">3.8</span>Chapter 3 Summary</h2>
+    <p>
+      From Chapter 1 to here, we've covered a complete journey: you saw the abstract concepts of Node, Topic,
+      Service, Action, and Parameter; in Chapter 2 you built your first quiet node; and in this chapter, for the
+      first time, you wrote three real ARCHO nodes — <code>battery_monitor</code>, <code>dashboard</code>, and
+      <code>motor_controller</code> — that actually talk to each other: one publishes, one listens, one responds to
+      quick requests, and one runs a long-running operation with live progress reporting.
+    </p>
+
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning Checkpoint</strong>
+      <ul>
+        <li>I can write a real publisher and subscriber with rclpy.</li>
+        <li>I know why we define custom messages in a separate _interfaces package.</li>
+        <li>I can implement a service with a custom request/response.</li>
+        <li>I can write an action server with goal/feedback/result and cancel support.</li>
+        <li>I know how to declare a parameter in code and load it from YAML.</li>
+        <li>I can run multiple nodes and a parameter file with a single launch file.</li>
+      </ul>
+    </div>
+
+    <h3>Connection to the Main Project</h3>
+    <p>
+      <span class="badge-project">ARCHO Project</span> now has a complete, real communication infrastructure. The
+      robot still has no physical body or wheels — that's exactly what we build in the next chapter.
+    </p>
+
+    <h3>What the Next Chapter Adds</h3>
+    <p>
+      In Chapter 4, we give ARCHO a real body for the first time: a chassis, two drive wheels, a caster wheel, and
+      mounting points for a LiDAR and an IMU — all using ROS 2's robot description language, URDF, and its smarter
+      version, Xacro.
+    </p>
+
+    <h3>Chapter 3 Glossary</h3>
+    <dl class="glossary">
+      <dt>create_publisher / create_subscription</dt><dd>Functions in the Node class for creating a publisher and subscriber on a given topic.</dd>
+      <dt>Timer</dt><dd>A mechanism in rclpy that automatically runs a function at a fixed time interval.</dd>
+      <dt>Interfaces Package</dt><dd>A package that holds only custom message, service, and action definitions, without executable logic.</dd>
+      <dt>ActionServer / call_async</dt><dd>rclpy tools for implementing the server side of an action and for calling a service asynchronously.</dd>
+      <dt>declare_parameter</dt><dd>A function that registers a parameter with a default value on a node.</dd>
+      <dt>DeclareLaunchArgument</dt><dd>A launch tool for accepting command-line input arguments and using them conditionally.</dd>
+    </dl>
+
+    <h3>Chapter 3 Common Mistakes — Summary</h3>
+    <ul>
+      <li>Forgetting to rebuild after changing a <code>.msg</code>/<code>.srv</code>/<code>.action</code> file.</li>
+      <li>Making a synchronous service call that locks up the node, instead of using <code>call_async</code>.</li>
+      <li>Not checking <code>is_cancel_requested</code> inside an action server, which means the operation can never actually be cancelled.</li>
+      <li>Hardcoding configuration values like speed or thresholds instead of defining them as parameters.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 3 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Designing ARCHO's Body with URDF and Xacro →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    sequence: { actorFontFamily: 'Inter', noteFontFamily: 'Inter', messageFontFamily: 'Inter' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

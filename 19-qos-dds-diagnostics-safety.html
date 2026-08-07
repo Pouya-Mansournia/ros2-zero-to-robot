@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 19 — QoS, DDS, Diagnostics, and Safety Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.5em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  .status-badge{display:inline-block; padding:3px 11px; border-radius:999px; font-family:'JetBrains Mono', monospace; font-size:.82em; font-weight:600;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2: Zero to Robot &nbsp;·&nbsp; Illustrated Learning Book</div>
+    <h1>Chapter 19: QoS, DDS, Diagnostics, and Safety Architecture</h1>
+    <div class="subtitle">From "it works" to "reliable in production"</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 2 (Topic/Service/Action), Chapter 18</div>
+      <div class="chip">Running project: ARCHO in a production environment</div>
+      <div class="chip">Concepts: DDS, QoS, Diagnostics, Safety Layers</div>
+      <div class="chip">Reading time: 150 to 170 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#dds"><span>19.1</span>DDS: the hidden heart of ROS 2 communication</a>
+    <a href="#why-qos"><span>19.2</span>Why QoS exists</a>
+    <a href="#qos-policies"><span>19.3</span>QoS policies, one by one</a>
+    <a href="#qos-mismatch"><span>19.4</span>QoS mismatch: when the Topic exists but no data arrives</a>
+    <a href="#domain-rmw"><span>19.5</span>ROS_DOMAIN_ID and RMW</a>
+    <a href="#interfaces"><span>19.6</span>Full review: when to use Topic, Service, Action, or Parameter</a>
+    <a href="#diagnostics"><span>19.7</span>Diagnostics: ARCHO must be able to say whether it is healthy</a>
+    <a href="#safety"><span>19.8</span>Multi-layer safety architecture</a>
+    <a href="#summary"><span>19.9</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="dds">
+    <h2><span class="num">19.1</span>DDS: the hidden heart of ROS 2 communication</h2>
+    <p>
+      From Chapter 2 up to now, we've worked with Topics, Services, and Actions many times without ever asking how messages
+      actually get from one Node to another. The answer to that question is one of the most important differences between ROS 2
+      and its predecessor (ROS 1): ROS 2 is built on top of an industry-standard Middleware called <strong>DDS</strong>.
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 What DDS handles</div>
+      <ul style="margin:0;">
+        <li>Discovery — automatically finding other Nodes on the network</li>
+        <li>Actual transport of messages</li>
+        <li>Quality of Service (QoS)</li>
+        <li>Communication between different Processes on a single computer</li>
+        <li>Communication between multiple different computers</li>
+        <li>Serialization (converting data into a transportable format)</li>
+        <li>Communication security</li>
+      </ul>
+    </div>
+    <div class="mermaid">
+flowchart TB
+    A["ROS 2 Node"] --> B["rclcpp / rclpy"] --> C["rcl"] --> D["RMW"] --> E["DDS Implementation"] --> F["Network"]
+    style D fill:#eef0ff,stroke:#3d4bf5
+    style E fill:#f4effe,stroke:#8b5cf6
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="why-qos">
+    <h2><span class="num">19.2</span>Why QoS exists</h2>
+    <div class="box idea">
+      <div class="box-title">🧠 Not all data has the same value</div>
+      <p>
+        If one out of a thousand LiDAR scans is lost, that's usually not a disaster. But if ARCHO's emergency stop command is
+        lost, that can be dangerous. A map might be published late, but every new Subscriber should still be able to get its
+        latest version — even if it comes online after the initial publication. That's why a single, fixed communication behavior
+        for every message simply doesn't make sense.
+      </p>
+    </div>
+    <p><strong>QoS (Quality of Service)</strong> is exactly what tunes this: every Topic can have its own communication behavior.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="qos-policies">
+    <h2><span class="num">19.3</span>QoS policies, one by one</h2>
+    <h3>Reliability</h3>
+    <table>
+      <tr><th>Mode</th><th>Behavior</th><th>Suitable for</th></tr>
+      <tr><td>Reliable</td><td>The message must be delivered; if a packet is lost, it is retried</td><td>Parameter Events, configuration, sensitive non-real-time commands</td></tr>
+      <tr><td>Best Effort</td><td>If the message arrives, great; if not, the next one comes along</td><td>Camera Stream, LiDAR, fast sensor data, weak WiFi networks</td></tr>
+    </table>
+    <h3>Durability</h3>
+    <table>
+      <tr><th>Mode</th><th>Behavior</th></tr>
+      <tr><td>Volatile</td><td>The Subscriber only receives messages published after it connects; it does not see earlier messages</td></tr>
+      <tr><td>Transient Local</td><td>The Publisher keeps the last piece of data so new Subscribers can also receive it — for example, for a Map</td></tr>
+    </table>
+    <h3>History</h3>
+    <table>
+      <tr><th>Mode</th><th>Behavior</th></tr>
+      <tr><td>Keep Last (depth=N)</td><td>Only the last N messages are kept</td></tr>
+      <tr><td>Keep All</td><td>All messages are kept up to the system's resource limits — this can consume a lot of memory</td></tr>
+    </table>
+    <h3>Deadline, Lifespan, and Liveliness</h3>
+    <table>
+      <tr><th>Policy</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td>Deadline</td><td>How often, at minimum, a message must arrive</td><td>The LiDAR must publish every 100 milliseconds; otherwise a Deadline Missed is reported — very useful for Health Monitoring</td></tr>
+      <tr><td>Lifespan</td><td>How long a message stays valid</td><td>A velocity command from 5 seconds ago should no longer be executed</td></tr>
+      <tr><td>Liveliness</td><td>Whether the Publisher is still alive</td><td>If the motor command Publisher dies, the system can automatically zero the command</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="qos-mismatch">
+    <h2><span class="num">19.4</span>QoS mismatch: when the Topic exists but no data arrives</h2>
+    <div class="box mistake">
+      <div class="box-title">⚠️ One of the most confusing ROS 2 bugs</div>
+      <p>
+        Suppose ARCHO's LiDAR publishes with <code>Best Effort</code>, but a new Subscriber only accepts
+        <code>Reliable</code>. Result: the connection either never forms, or the expected behavior doesn't happen —
+        and the telltale sign is that <code>/scan</code> shows up in <code>ros2 topic list</code>,
+        but no data is ever received.
+      </p>
+    </div>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#f66;"></div>
+        <div class="term-dot" style="background:#fc5;"></div>
+        <div class="term-dot" style="background:#6c6;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> ros2 topic info /scan --verbose
+<span class="term-out">Publisher count: 1
+  QoS profile: Reliability: BEST_EFFORT
+Subscription count: 1
+  QoS profile: Reliability: RELIABLE</span>
+      </div>
+    </div>
+    <p>This command is exactly where you'll spot a mismatch between a Publisher and a Subscriber.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="domain-rmw">
+    <h2><span class="num">19.5</span>ROS_DOMAIN_ID and RMW</h2>
+    <div class="box def">
+      <div class="box-title">📖 ROS_DOMAIN_ID is like a separate communication channel</div>
+      <pre style="margin:10px 0 0;"><code>export ROS_DOMAIN_ID=20</code></pre>
+      <p style="margin-top:10px;">
+        Systems with different Domain IDs usually don't see a shared ROS Graph. For example, one lab could use
+        Domain 10 and another lab Domain 20 so their Discovery traffic doesn't mix.
+      </p>
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Domain ID is not a security mechanism</div>
+      <p>
+        Domain ID only separates Discovery — it does not encrypt or protect the communication. Relying on Domain ID
+        or a WiFi password for real security isn't enough — this is something later chapters on security will
+        explore further (if we continue down that path).
+      </p>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 What RMW is</div>
+      <p>
+        ROS Middleware — the layer that connects ROS 2 to an actual DDS implementation (such as Cyclone DDS or Fast DDS).
+        As we saw in the diagram above, this layer sits between <code>rcl</code> and the DDS itself
+        and lets ROS 2 switch between different DDS implementations without changing code.
+      </p>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 The golden sentence of QoS</div>
+      <p>QoS doesn't determine what data a message carries; it determines how reliably, persistently, freshly, and promptly that data is delivered.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="interfaces">
+    <h2><span class="num">19.6</span>Full review: when to use Topic, Service, Action, or Parameter</h2>
+    <p>Now that you understand DDS and QoS, it's a good time to review the four main ROS 2 communication types (which we worked with in Chapters 2 and 3) all together:</p>
+    <table>
+      <tr><th>Type</th><th>Suitable for</th><th>Example in ARCHO</th></tr>
+      <tr><td>Topic</td><td>Continuous data stream; the Publisher doesn't need to know who is listening</td><td>LiDAR Scan, IMU, Encoder, Battery Status, Camera Image</td></tr>
+      <tr><td>Service</td><td>Fast, short request/response; not suitable for long-running work</td><td>Reset Odometry, Clear Fault, Enable Motor, Get Firmware Version</td></tr>
+      <tr><td>Action</td><td>Work that takes time and needs Goal/Feedback/Result and Cancel</td><td>Navigate to Pose, Dock Robot, Follow Waypoints, Calibrate Wheels</td></tr>
+      <tr><td>Parameter</td><td>Configuring a Node's behavior; unsuitable for fast sensor data</td><td>max_velocity, wheel_radius, safety_distance, controller_frequency</td></tr>
+    </table>
+    <div class="mermaid">
+flowchart TB
+    Q1["Continuous data?"] -->|Yes| T["Topic"]
+    Q2["Quick, short request?"] -->|Yes| S["Service"]
+    Q3["Long task with Progress and Cancel?"] -->|Yes| A["Action"]
+    Q4["A Node's configuration?"] -->|Yes| P["Parameter"]
+    style T fill:#eef0ff,stroke:#3d4bf5
+    style S fill:#eafaf3,stroke:#0e9e6e
+    style A fill:#f4effe,stroke:#8b5cf6
+    style P fill:#fdf3e4,stroke:#c8862c
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="diagnostics">
+    <h2><span class="num">19.7</span>Diagnostics: ARCHO must be able to say whether it is healthy</h2>
+    <p>An industrial robot shouldn't just work; it must be able to answer the question: "Am I healthy or not?"</p>
+    <h3>Health states</h3>
+    <table>
+      <tr><th>State</th><th>Meaning</th></tr>
+      <tr><td><span class="status-badge" style="background:#eafaf3;color:#0e9e6e;">OK</span></td><td>Everything is normal</td></tr>
+      <tr><td><span class="status-badge" style="background:#fdf3e4;color:#c8862c;">WARN</span></td><td>There's an issue, but it's not yet dangerous</td></tr>
+      <tr><td><span class="status-badge" style="background:#fdeeec;color:#d64a3c;">ERROR</span></td><td>A serious error has occurred</td></tr>
+      <tr><td><span class="status-badge" style="background:#f1efe8;color:#7a7568;">STALE</span></td><td>The data we're receiving from this component is no longer up to date</td></tr>
+    </table>
+    <p>Example of a snapshot of ARCHO's status:</p>
+    <pre><code>LiDAR:        OK
+IMU:          OK
+Battery:      WARN
+Motor Driver: ERROR
+Camera:       STALE</code></pre>
+    <h3>Health Manager</h3>
+    <div class="mermaid">
+flowchart LR
+    L["LiDAR Driver"] --> HM["Health Manager"]
+    I["IMU Driver"] --> HM
+    M["Motor Driver"] --> HM
+    B["Battery Driver"] --> HM
+    LO["Localization"] --> HM
+    N["Nav2"] --> HM
+    style HM fill:#3d4bf5,color:#fff
+    </div>
+    <p>Based on all these inputs, the Health Manager decides: should the mission continue? Should speed be reduced? Should ARCHO stop completely? Should the operator be notified?</p>
+    <h3>Heartbeat and sensor timeouts</h3>
+    <div class="box def">
+      <div class="box-title">📖 What a Heartbeat is</div>
+      <p>
+        A simple message that just says "I'm still alive." For example, the MCU sends a Heartbeat every 50 milliseconds. If the
+        main computer doesn't see a Heartbeat for 300 milliseconds, it concludes the MCU has disconnected — exactly the same
+        Watchdog principle we saw in Chapters 16 and 18.
+      </p>
+    </div>
+    <pre><code>now - last_scan_time > 0.5 second
+      ↓
+LiDAR Timeout
+      ↓
+Controller stop → Mission pause → Operator notification</code></pre>
+    <h3>Fault Severity</h3>
+    <table>
+      <tr><th>Level</th><th>Example</th></tr>
+      <tr><td>Info</td><td>Map loaded</td></tr>
+      <tr><td>Warning</td><td>Battery below 30%</td></tr>
+      <tr><td>Recoverable Error</td><td>LiDAR temporarily unavailable</td></tr>
+      <tr><td>Critical Error</td><td>Motor overcurrent, Emergency stop active</td></tr>
+    </table>
+    <h3>Overall system health State Machine</h3>
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> BOOTING
+    BOOTING --> INITIALIZING
+    INITIALIZING --> READY
+    READY --> RUNNING
+    RUNNING --> DEGRADED
+    DEGRADED --> RUNNING
+    RUNNING --> FAULT
+    DEGRADED --> FAULT
+    FAULT --> RECOVERY
+    RECOVERY --> READY
+    </div>
+    <p>
+      For example, if ARCHO's camera fails but Navigation can continue using only the LiDAR, the system moves to the
+      <strong>DEGRADED</strong> state — not stopped, but with reduced capability. If the Encoder fails, this is a
+      more serious error, and the system moves to <strong>FAULT</strong>.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="safety">
+    <h2><span class="num">19.8</span>Multi-layer safety architecture</h2>
+    <div class="box mistake">
+      <div class="box-title">⚠️ A common wrong assumption</div>
+      <p>
+        We shouldn't assume that "because the ROS 2 Nodes are healthy, the robot is safe." Software can crash,
+        the network can drop, a wrong Topic can get published, the CPU can hang, or an old command can mistakenly persist.
+        That's exactly why real safety can't live in just one software layer.
+      </p>
+    </div>
+    <h3>Three types of Stop</h3>
+    <table>
+      <tr><th>Type</th><th>Behavior</th></tr>
+      <tr><td>Normal Stop</td><td>The Controller smoothly brings speed down to zero</td></tr>
+      <tr><td>Protective Stop</td><td>A fast but controlled stop due to a detected human or hazardous obstacle</td></tr>
+      <tr><td>Emergency Stop</td><td>A fully hardware-level cutoff of actuator power — this must never be just a software Topic</td></tr>
+    </table>
+    <h3>Six safety layers</h3>
+    <div class="mermaid">
+flowchart TB
+    L1["Layer 1: Nav2 Collision Avoidance"] --> L2["Layer 2: Software Safety Supervisor"]
+    L2 --> L3["Layer 3: MCU Watchdog"]
+    L3 --> L4["Layer 4: Motor Driver Protections"]
+    L4 --> L5["Layer 5: Safety Relay / E-Stop Circuit"]
+    L5 --> L6["Layer 6: Mechanical Brake"]
+    style L1 fill:#eef0ff,stroke:#3d4bf5
+    style L6 fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <div class="box idea">
+      <div class="box-title">🧠 Why six layers, not one</div>
+      <p>
+        If Layer 1 (Nav2's intelligent collision avoidance) fails for any reason, the layers below it must still be
+        able to contain the risk. This is exactly the lesson we learned in Chapter 18 about "one safety layer is not
+        enough" — here we turn that principle into a complete six-layer architecture.
+      </p>
+    </div>
+    <h3>Safety Supervisor</h3>
+    <div class="mermaid">
+flowchart TB
+    A["Nav2 cmd_vel"] --> S["Safety Supervisor"]
+    S --> Q1["E-stop active?"]
+    S --> Q2["Human too close?"]
+    S --> Q3["Localization lost?"]
+    S --> Q4["Motor fault?"]
+    S --> Q5["Command timeout?"]
+    S --> O["safe_cmd_vel"]
+    style S fill:#3d4bf5,color:#fff
+    style O fill:#eafaf3,stroke:#0e9e6e
+    </div>
+    <p>Safety Supervisor inputs: <code>cmd_vel</code>, LiDAR safety zones, Bumper, E-stop, motor faults, Localization quality, and battery status. Outputs: <code>safe_cmd_vel</code>, <code>motor_enable</code>, <code>protective_stop</code>.</p>
+    <h3>Zone-based speed limits</h3>
+    <table>
+      <tr><th>Zone</th><th>Allowed speed</th></tr>
+      <tr><td>Open warehouse area</td><td>0.8 meters/second</td></tr>
+      <tr><td>Near humans</td><td>0.3 meters/second</td></tr>
+      <tr><td>Docking area</td><td>0.1 meters/second</td></tr>
+    </table>
+    <p>These limits can change dynamically based on the map, live LiDAR data, current position, mission type, and human presence.</p>
+    <h3>Bumper: the last physical layer</h3>
+    <div class="mermaid">
+flowchart LR
+    A["Bumper Pressed"] --> B["Immediate Motor Stop"] --> C["Mission Cancel"] --> D["Reverse Only After Validation"]
+    style A fill:#fdeeec,stroke:#d64a3c
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Never reverse immediately</div>
+      <p>
+        When the Bumper is pressed, ARCHO must never immediately reverse without an automatic check first — an
+        obstacle, or even a human, could be standing right behind it.
+      </p>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 The golden sentence of Safety</div>
+      <p>Real safety means that even when high-level software makes a mistake, the hardware and low-level control never allow a dangerous state to occur.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">19.9</span>Chapter 19 summary</h2>
+    <p>
+      ARCHO now not only works, but also knows how to cope with unfavorable network conditions (QoS), how to report
+      which part of its body is unhealthy (Diagnostics), and how to protect itself and the humans around it even when
+      something goes wrong in software (multi-layer safety architecture). These are exactly the differences that
+      separate a student project from a real industrial product.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain the difference between Reliable and Best Effort with an example.</li>
+        <li>I know why Transient Local is more suitable than Volatile for a Map.</li>
+        <li>I can recognize the common symptom of a QoS mismatch and know which command to use to investigate it.</li>
+        <li>I know why ROS_DOMAIN_ID is not a security mechanism.</li>
+        <li>I can explain the four health states (OK/WARN/ERROR/STALE) with an example.</li>
+        <li>I know why safety must be designed across six independent layers, not one.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a Health Manager with four status levels, a Safety Supervisor with six independent safety layers, and properly tuned QoS Profiles for each type of data (fast sensor data versus critical commands).</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 20 — the final chapter of this path — we bring together everything we built across these 19 chapters and see ARCHO's complete final industrial architecture.</p>
+    <h3>Chapter 19 glossary</h3>
+    <dl class="glossary">
+      <dt>DDS</dt><dd>Data Distribution Service; the Middleware standard underlying ROS 2's communication infrastructure.</dd>
+      <dt>QoS (Quality of Service)</dt><dd>A set of policies that determine the reliability, persistence, and timeliness behavior of a Topic's communication.</dd>
+      <dt>RMW</dt><dd>ROS Middleware; the layer that connects ROS 2 to a specific DDS implementation.</dd>
+      <dt>ROS_DOMAIN_ID</dt><dd>An identifier that separates the Discovery of multiple independent ROS 2 systems from each other.</dd>
+      <dt>Diagnostic Aggregator</dt><dd>A system that collects and summarizes the health status of all subsystems.</dd>
+      <dt>Heartbeat</dt><dd>A simple periodic message that confirms a subsystem is alive.</dd>
+      <dt>Safety Supervisor</dt><dd>A software layer that filters the final motion command based on safety conditions.</dd>
+      <dt>Protective Stop</dt><dd>A fast but controlled stop due to an obvious hazard, between Normal Stop and Emergency Stop.</dd>
+    </dl>
+    <h3>Chapter 19 common mistakes — summary</h3>
+    <ul>
+      <li>Using Reliable for all Topics regardless of data type.</li>
+      <li>Relying on ROS_DOMAIN_ID as a security mechanism.</li>
+      <li>Not having a central Diagnostic Aggregator to see the whole system's health at a glance.</li>
+      <li>Designing Emergency Stop as just a software Topic without hardware backup.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 19 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: ARCHO's Final Industrial Architecture (final chapter) →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

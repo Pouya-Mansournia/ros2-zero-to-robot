@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 1 — ROS 2 Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#fffefb;
+    --panel2:#f1efe8;
+    --border:#e6e1d6;
+    --text:#211f1a;
+    --muted:#7a7568;
+    --accent:#3d4bf5;
+    --accent-ink:#2732b8;
+    --accent2:#0e9e6e;
+    --gold:#c8862c;
+    --danger:#d64a3c;
+    --purple:#8b5cf6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.85;
+    font-size:17.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+
+  /* Cover */
+  .cover{
+    border-radius:28px;
+    background:#12142b;
+    padding:64px 44px;
+    margin-bottom:56px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .cover::before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px);
+    z-index:0;
+  }
+  .cover::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index:0;
+  }
+  .cover > *{position:relative; z-index:1;}
+  .kicker{
+    display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px;
+    margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
+    padding:6px 14px; border-radius:999px;
+  }
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0;
+    padding:7px 15px; border-radius:999px; font-size:.83em;
+  }
+
+  h2{
+    font-size:1.9em; font-weight:800; margin:72px 0 22px;
+    display:flex; align-items:center; gap:14px; letter-spacing:-.3px;
+  }
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;}
+  strong{color:var(--text); font-weight:700;}
+
+  a{color:var(--accent);}
+
+  /* Callout boxes */
+  .box{
+    border-radius:16px; padding:20px 24px; margin:22px 0;
+    border:1px solid var(--border); background:var(--panel);
+    position:relative;
+    box-shadow:0 1px 2px rgba(33,31,26,0.03);
+  }
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;}
+  .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;}
+  .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;}
+  .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;}
+  .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;}
+  .box.def .box-title{color:var(--gold);}
+
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{
+    background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px;
+    padding:2px 7px; font-size:.87em; color:var(--accent-ink);
+    display:inline-block;
+  }
+  pre{
+    background:#181a2e; border-radius:16px;
+    padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65;
+    box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);
+  }
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;}
+  li{margin-bottom:7px;}
+
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+
+  .checkpoint{
+    border-radius:16px; padding:22px 24px; margin:26px 0;
+    background:#eafaf3; border:1px solid #c9eeda;
+  }
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;}
+  .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+
+  .exercise{
+    border-radius:14px; padding:18px 22px; margin:16px 0;
+    background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);
+  }
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;}
+  .glossary dd{margin:4px 0 0; color:var(--muted);}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;}
+  .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+
+  .footer-nav{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:.9em;
+  }
+
+  .badge-project{
+    display:inline-block; background:#fdf3e4;
+    border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;
+  }
+
+  @media print{
+    body{background:#fff; color:#000;}
+  }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 1: ROS 2 Architecture</h1>
+    <div class="subtitle">The backbone of every robot — from Node to Launch File</div>
+    <div class="meta-row">
+      <div class="chip">Audience: beginner to robotics engineer</div>
+      <div class="chip">Prerequisite: no prior ROS experience needed</div>
+      <div class="chip">Ongoing project: the ARCHO robot</div>
+      <div class="chip">Study time: 90 to 120 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#big-picture"><span>1.1</span>The Big Picture — Why Architecture Before Code?</a>
+    <a href="#node"><span>1.2</span>Node — The Living Unit of the System</a>
+    <a href="#topic"><span>1.3</span>Topic and Message — A Continuous Stream of Data</a>
+    <a href="#service"><span>1.4</span>Service — Request and Response</a>
+    <a href="#action"><span>1.5</span>Action — Long-Running and Cancellable Operations</a>
+    <a href="#compare"><span>1.6</span>Comparing the Three Communication Methods</a>
+    <a href="#parameter"><span>1.7</span>Parameter — Tuning Behavior Without Changing Code</a>
+    <a href="#launch"><span>1.8</span>Launch File — Starting the Whole System</a>
+    <a href="#architecture"><span>1.9</span>The Complete Architecture Map</a>
+    <a href="#summary"><span>1.10</span>Summary, Glossary, and Exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">1.1</span>The Big Picture: Why Architecture Before Code?</h2>
+    <p>
+      Imagine you're about to build a robot called <strong>ARCHO</strong>: a small robot that needs to move between the tall
+      shelves of a warehouse, find its way using a laser sensor, and stop if a human steps in front of it. The first
+      temptation is to open a code file and start writing: read from the camera, process it, send it to the motors. After a
+      few hours you find everything stuck in a thousand-line file, unable to test any part on its own, and if one line of
+      code breaks, the entire robot freezes. This is exactly the path most ROS 2 tutorials take: they jump straight to
+      terminal commands — install this, run that — and you learn to type commands without knowing why.
+    </p>
+    <p>
+      This book, and this chapter in particular, takes a different path. Before we write even a single line of code for
+      ARCHO, we sit down and sketch its map: what pieces we need, what each one does, and how they talk to each other.
+      This is exactly what a real robotics engineer does before writing the first line of code. The good news is that the
+      people who built ROS 2 solved this exact problem years ago, and almost the entire system — from a simple vacuum
+      robot to an industrial robotic arm — is built on just a handful of concepts:
+    </p>
+    <div class="box def">
+      <div class="box-title">💡 Simple Idea</div>
+      <p>
+        If you learn the five concepts <strong>Node</strong>, <strong>Topic</strong>, <strong>Message</strong>,
+        <strong>Service</strong>, and <strong>Action</strong> well, you've understood about 70% of ROS 2. The rest of the
+        book's chapters are just details and tools built around this same core.
+      </p>
+    </div>
+
+    <p>By the end of this chapter, you'll know these seven foundational concepts and be able to answer these four questions for any Node in any project:</p>
+    <ul>
+      <li>What Topics does this Node publish, and what Topics does it listen to?</li>
+      <li>What Services does this Node provide or call?</li>
+      <li>What Actions does this Node perform?</li>
+      <li>What Parameters control this Node's behavior?</li>
+    </ul>
+
+    <p>The learning map for this chapter looks like this — each box builds on the one before it:</p>
+
+    <div class="mermaid">
+flowchart RL
+    A["Node<br/>Independent execution unit"] --> B["Topic + Message<br/>Continuous data stream"]
+    A --> C["Service<br/>Request / Response"]
+    A --> D["Action<br/>Long-running operation"]
+    A --> E["Parameter<br/>Behavior configuration"]
+    B --> F["Launch File<br/>Starts the whole system"]
+    C --> F
+    D --> F
+    E --> F
+    F --> G["Chapter 2: Development Environment<br/>Workspace and Package"]
+    style A fill:#2f7de8,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style F fill:#d98c19,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style G fill:#0f9d78,stroke:#ffffff,color:#0b1220,font-weight:bold
+    </div>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: The Story of the ARCHO Robot</div>
+      <p>
+        Throughout this book, we'll apply every concept to one consistent project: <strong>ARCHO</strong>, a simple mobile
+        robot that will move around a large warehouse, sense its surroundings with LiDAR, and find its own path. Each
+        chapter completes another piece of this robot. In this chapter, we'll only design ARCHO's communication skeleton;
+        we won't write any code yet.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="node">
+    <h2><span class="num">1.2</span>Node — The Living Unit of the System</h2>
+
+    <h3>How was this problem solved before ROS?</h3>
+    <p>
+      Let's go back to ARCHO and that thousand-line file. Suppose you've been working on it for three weeks: reading the
+      camera, processing images, computing the path, controlling the motors — all in one program, in one process. As long
+      as the project is small, everything goes fine. But one morning, the image-processing part crashes and the entire
+      robot freezes — even the motors stop responding, because everything is stuck in one program. Worse, when you just
+      want to test the path-planning algorithm, you have to compile and run the entire giant program just to see whether
+      one line of computation works correctly. This is the wall that almost everyone who starts without ROS eventually
+      hits.
+    </p>
+
+    <h3>ROS's solution: split into independent units</h3>
+    <p>
+      ROS solves this problem with a concept called a <strong>Node</strong>. Each Node is a small, independent program with
+      exactly one clear responsibility. One only reads from the camera, one only computes the path, one only sends
+      commands to the motors.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Node</div>
+      <p>
+        A <strong>Node</strong> is an independent process in ROS 2 that performs one specific task and communicates with
+        other Nodes through Topics, Services, Actions, or Parameters in order to do so.
+      </p>
+    </div>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy</div>
+      <p>
+        Picture a restaurant. The chef, the waiter, the cashier, and the dishwasher are each independent people; none of
+        them does another's job, but they coordinate to keep the restaurant running. If the dishwasher doesn't show up
+        today, the restaurant can still serve food — the dishes just pile up. In exactly the same way, if a robot's camera
+        Node goes down, the other Nodes (say, the motor or the LiDAR) are still alive.
+      </p>
+    </div>
+
+    <p>In a real mobile robot, dozens of Nodes are typically running simultaneously:</p>
+    <table>
+      <tr><th>Node</th><th>Responsibility</th></tr>
+      <tr><td><code>camera_node</code></td><td>Reads images from the camera and publishes them</td></tr>
+      <tr><td><code>lidar_node</code></td><td>Reads laser range-finder data</td></tr>
+      <tr><td><code>slam_node</code></td><td>Builds a map of the environment from sensor data</td></tr>
+      <tr><td><code>navigation_node</code></td><td>Computes the path to the target</td></tr>
+      <tr><td><code>motor_controller_node</code></td><td>Converts velocity commands into motor signals</td></tr>
+    </table>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common Beginner Mistake</div>
+      <p>
+        Many newcomers think they should write all of the robot's logic in one big Node to make it "simpler." The result
+        is the opposite: debugging becomes hard, testing each part separately becomes impossible, and if one part crashes,
+        the whole robot goes down. Golden rule: one Node, one responsibility.
+      </p>
+    </div>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Perspective</div>
+      <p>
+        From a software-architecture point of view, a Node in ROS 2 plays exactly the same role as a <em>microservice</em>
+        in web-service architecture: a small, independent, replaceable unit with a clear communication contract with the
+        rest of the system. This resemblance is no accident — both were designed to solve the same problem: reducing
+        coupling between the parts of a large system.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        If you wanted to design a simple vacuum-cleaning robot, what Nodes would you probably need? Name at least four
+        and write each one's responsibility in a single sentence.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="topic">
+    <h2><span class="num">1.3</span>Topic and Message — A Continuous Stream of Data</h2>
+
+    <h3>Problem: how should Nodes talk to each other?</h3>
+    <p>
+      Okay, now we've split ARCHO into several independent Nodes — one for the camera, one for image processing, one for
+      the motors. But a new problem has appeared: these Nodes are isolated in their own worlds. The camera Node captures a
+      fresh image every moment, but if there's no way to get it to the image-processing Node, that image just sits in the
+      camera's memory and is useless. We need a way for these independent islands to talk to each other. The first and
+      most common communication method in ROS 2 is the <strong>Topic</strong>.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Topic and Message</div>
+      <p>
+        A <strong>Topic</strong> is a named channel for transmitting data. One Node can <strong>publish</strong>
+        information on a Topic, and any other Node can <strong>subscribe</strong> to that same Topic and receive the
+        information. Every packet of data sent on a Topic is called a <strong>Message</strong>.
+      </p>
+    </div>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: the Kitchen Monitor</div>
+      <p>
+        In a restaurant, the chef displays every dish that's ready on a monitor. The chef doesn't know who's watching —
+        maybe the waiter, maybe the manager, maybe no one. They just keep publishing the status continuously. This is
+        exactly how a Publisher behaves on a Topic.
+      </p>
+    </div>
+
+    <div class="figure">
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <defs>
+          <marker id="arrow1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#2f7de8"/>
+          </marker>
+        </defs>
+        <rect x="20" y="80" width="150" height="60" rx="12" fill="#f1efe8" stroke="#2f7de8" stroke-width="2"/>
+        <text x="95" y="105" fill="#211f1a" font-size="15" font-family="Inter" text-anchor="middle" font-weight="700">Camera Node</text>
+        <text x="95" y="126" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Publisher</text>
+
+        <line x1="170" y1="110" x2="300" y2="110" stroke="#2f7de8" stroke-width="2" marker-end="url(#arrow1)"/>
+        <rect x="300" y="80" width="160" height="60" rx="30" fill="#e7f0fe" stroke="#d98c19" stroke-width="2"/>
+        <text x="380" y="105" fill="#d98c19" font-size="14" font-family="Inter" text-anchor="middle" font-weight="700">Topic: /image</text>
+        <text x="380" y="126" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">sensor_msgs/Image</text>
+
+        <line x1="460" y1="110" x2="590" y2="110" stroke="#2f7de8" stroke-width="2" marker-end="url(#arrow1)"/>
+        <rect x="590" y="80" width="150" height="60" rx="12" fill="#f1efe8" stroke="#0f9d78" stroke-width="2"/>
+        <text x="665" y="105" fill="#211f1a" font-size="15" font-family="Inter" text-anchor="middle" font-weight="700">Vision Node</text>
+        <text x="665" y="126" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Subscriber</text>
+
+        <text x="380" y="40" fill="#3c382f" font-size="13" font-family="Inter" text-anchor="middle">30 times per second, non-stop, no prior request</text>
+        <text x="380" y="190" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Each message on this channel is a Message of type sensor_msgs/Image</text>
+      </svg>
+      <figcaption>Figure 1.1 — A Publisher (camera) continuously publishes Messages, and one or more Subscribers (image processing) receive them.</figcaption>
+    </div>
+
+    <p>A few important points about Topics to keep in mind from the start:</p>
+    <ul>
+      <li>A Topic can have several Publishers and several Subscribers at the same time.</li>
+      <li>A Publisher never waits to see whether anyone is listening; it simply publishes.</li>
+      <li>Each Topic carries exactly one specific Message type; for example, <code>/image</code> is always <code>sensor_msgs/Image</code>.</li>
+      <li>A Message itself is just a data format — like a predefined form with a specific set of fields.</li>
+    </ul>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example from ARCHO</div>
+      <p>
+        In the ARCHO robot, the LiDAR Node publishes distance data on a Topic called <code>/scan</code> using the message
+        type <code>sensor_msgs/LaserScan</code>. At the same time, both the mapping (SLAM) Node and the obstacle-detection
+        Node subscribe to this same shared Topic — without the LiDAR ever knowing how many listeners there are.
+      </p>
+    </div>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common Mistake</div>
+      <p>
+        Many newcomers think all communication between Nodes should go through Topics. A Topic is only suited to a
+        continuous stream of data. If you want to ask a Node something and wait for a specific answer, a Topic is not the
+        right tool — as we'll see in the next section.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Intermediate Exercise</div>
+      <p>
+        Suppose you've mounted an IMU (an acceleration and orientation sensor) on the robot that produces new data every
+        100 milliseconds. Is this a good fit for a Topic or not? Write your reasoning in two lines.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="service">
+    <h2><span class="num">1.4</span>Service — Request and Response</h2>
+
+    <h3>Problem: sometimes we just want one specific answer</h3>
+    <p>
+      Now that ARCHO is broadcasting camera data over a Topic, something interesting happens: the development team, excited
+      about this new tool, starts trying to solve everything with Topics — even saving the map, even reading the battery
+      level. The result? Countless channels constantly sending useless messages. To understand why this is a mistake,
+      let's step back into a restaurant. If you want to see the kitchen's status live, that's exactly like a Topic —
+      information is continuously broadcast. But if you want to say "one pizza, please," something different happens: you
+      send a specific request and wait for a specific answer. That's no longer a Topic; it's a
+      <strong>Request/Response</strong> pattern. ROS built <strong>Service</strong> for exactly this purpose.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Service</div>
+      <p>
+        A <strong>Service</strong> is a two-way communication in which one Node (the <strong>Client</strong>) sends a
+        <strong>Request</strong>, and another Node (the <strong>Server</strong>) processes it and returns a specific
+        <strong>Response</strong>.
+      </p>
+    </div>
+
+    <div class="figure">
+      <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <defs>
+          <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#7c5cff"/>
+          </marker>
+        </defs>
+        <rect x="30" y="70" width="150" height="60" rx="12" fill="#f1efe8" stroke="#7c5cff" stroke-width="2"/>
+        <text x="105" y="95" fill="#211f1a" font-size="15" font-family="Inter" text-anchor="middle" font-weight="700">Client</text>
+        <text x="105" y="116" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Navigation Node</text>
+
+        <rect x="580" y="70" width="150" height="60" rx="12" fill="#f1efe8" stroke="#0f9d78" stroke-width="2"/>
+        <text x="655" y="95" fill="#211f1a" font-size="15" font-family="Inter" text-anchor="middle" font-weight="700">Server</text>
+        <text x="655" y="116" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Map Server</text>
+
+        <line x1="180" y1="85" x2="580" y2="85" stroke="#7c5cff" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="380" y="72" fill="#7c5cff" font-size="13" font-family="Inter" text-anchor="middle">Request: filename = warehouse_map</text>
+
+        <line x1="580" y1="118" x2="180" y2="118" stroke="#0f9d78" stroke-width="2" marker-end="url(#arrow2)"/>
+        <text x="380" y="145" fill="#0f9d78" font-size="13" font-family="Inter" text-anchor="middle">Response: success = true</text>
+
+        <text x="380" y="185" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">The Client waits for the Response to arrive; then the exchange ends</text>
+      </svg>
+      <figcaption>Figure 1.2 — The Service pattern: one request, one response, done.</figcaption>
+    </div>
+
+    <h3>When to use a Topic, when to use a Service?</h3>
+    <table>
+      <tr><th>Criterion</th><th>A Topic is a good fit if...</th><th>A Service is a good fit if...</th></tr>
+      <tr><td>Data type</td><td>It's constantly changing (camera, LiDAR, IMU)</td><td>It's only read or executed when needed</td></tr>
+      <tr><td>Timing pattern</td><td>A continuous, repeating stream</td><td>A one-time, request-driven event</td></tr>
+      <tr><td>Example</td><td>Instantaneous speed, camera image, Odometry</td><td>Saving a map, resetting an Encoder, reading battery percentage</td></tr>
+      <tr><td>Expecting a reply</td><td>The Publisher doesn't wait for a reply</td><td>The Client waits for a specific Response</td></tr>
+    </table>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: Robot Battery</div>
+      <p>
+        Does the robot need to publish its battery percentage to everyone every second? No — that's wasteful and hogs
+        network bandwidth. Instead, whenever needed (say, when a UI is opened), a <code>Get Battery Status</code> request
+        is sent, and the Server returns a single response of <code>78%</code>.
+      </p>
+    </div>
+
+    <p>In the ARCHO project, examples of real Services would include:</p>
+    <ul>
+      <li><code>reset_encoder</code> — zero out the wheel counters</li>
+      <li><code>calibrate_imu</code> — calibrate the inertial sensor</li>
+      <li><code>save_map</code> — save the built map to disk</li>
+      <li><code>get_battery_status</code> — read the current battery percentage</li>
+    </ul>
+
+    <h4>Inspecting a Service from the command line</h4>
+    <p>When we reach the hands-on chapters, these commands will be your everyday tools:</p>
+    <pre><code>ros2 service list
+ros2 service type /clear
+ros2 interface show std_srvs/srv/Empty
+ros2 service call /clear std_srvs/srv/Empty "{}"</code></pre>
+    <p>
+      The output of <code>std_srvs/srv/Empty</code> is just a line of <code>---</code>, because this Service type carries
+      no data in its Request or Response; calling it simply triggers an action, exactly like pressing a button. By
+      contrast, <code>example_interfaces/srv/AddTwoInts</code> takes two integers (<code>a</code> and <code>b</code>) and
+      returns their sum (<code>sum</code>).
+    </p>
+
+    <div class="exercise">
+      <div class="level">Intermediate Exercise</div>
+      <p>
+        Suppose you tell the robot "go to room number 5." Is this a Topic? Is it a Service? If the answer to both is no,
+        think about why — this question leads us directly into the next section.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="action">
+    <h2><span class="num">1.5</span>Action — Long-Running and Cancellable Operations</h2>
+
+    <p>
+      One day, a member of the ARCHO team asks a simple question that leaves everyone quiet for a few minutes: "If we want
+      to tell the robot to go to shelf number 5, which tool should we use?" Everyone thinks the answer is a Service — one
+      request, one response. But looking more closely, they realize the command "go to shelf 5" is neither a Topic nor a
+      Service. Why? Because this task might take several minutes: the movement has to start, progress has to be reported,
+      an obstacle might turn up along the way, it might need to be cancelled, and at the end we need to know whether it
+      succeeded or not. A Service only gives one short reply and doesn't wait around for a long task to finish. For this
+      class of tasks, ROS 2 introduces a third concept called <strong>Action</strong>.
+    </p>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: Ordering a Ride-Hailing Taxi</div>
+      <p>
+        When you request a ride from a taxi app, you don't just get one reply. First they say a driver accepted, then they
+        say the driver is 3 kilometers away, then they say the driver has arrived, then the trip begins, and finally the
+        trip ends. This is exactly what Action provides in ROS 2: one goal, several progress updates, and one final
+        result.
+      </p>
+    </div>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Action</div>
+      <p>
+        An <strong>Action</strong> is a long-running operation whose progress can be observed while it runs, which can be
+        cancelled if needed, and which returns a final result at the end. Every Action consists of three parts: a
+        <strong>Goal</strong>, <strong>Feedback</strong> (progress reports), and a <strong>Result</strong> (final
+        outcome).
+      </p>
+    </div>
+
+    <div class="mermaid">
+sequenceDiagram
+    participant C as Client (Navigation)
+    participant S as Action Server (Motion Controller)
+    C->>S: Goal: Move To Kitchen
+    S-->>C: Feedback: 20%
+    S-->>C: Feedback: 50%
+    S-->>C: Feedback: 80%
+    Note over C,S: At any point the Client can send Cancel Goal
+    S-->>C: Result: Succeeded
+    </div>
+    <p style="text-align:center; color:var(--muted); font-size:.87em; margin-top:-10px;">Figure 1.3 — The full cycle of an Action: from Goal to Result, with a few Feedback updates in between.</p>
+
+    <table>
+      <tr><th>Action Part</th><th>Role</th><th>Example</th></tr>
+      <tr><td>Goal</td><td>The objective to be accomplished</td><td><code>target_x: 5.2, target_y: 8.1</code></td></tr>
+      <tr><td>Feedback</td><td>Status report during execution</td><td><code>distance_remaining: 2.3</code></td></tr>
+      <tr><td>Result</td><td>Final outcome once finished</td><td><code>success: true</code></td></tr>
+    </table>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: a Robotic Arm</div>
+      <p>
+        Suppose a robot arm has to tighten a screw; this could take 20 seconds. If we used a Service, we'd get only a
+        request and a reply, with no visibility into what's happening in between. With Action, we track the steps live:
+        <code>Approaching → Aligning → Tightening → Finished</code>. If the object falls mid-way, the Result comes back
+        as <code>Failed</code> — not an ambiguous silence.
+      </p>
+    </div>
+
+    <p>
+      One of the most well-known real-world Actions in ROS 2 is <code>NavigateToPose</code> in the Nav2 package. Almost
+      every Nav2-based mobile robot uses this exact Action to go to a target point: the Client says "go here," and the
+      Server reports the stages <code>Planning… → Moving… → Avoiding Obstacle… → Arrived</code>.
+    </p>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common Mistake</div>
+      <p>
+        An important capability that Action has and Topic and Service don't is the ability to
+        <strong>Cancel</strong>. If the robot is moving and a human suddenly steps in front of it, a <code>Cancel Goal</code>
+        can be sent at that instant and the robot stops. Many early designs forget this capability and later run into
+        trouble when trying to add an "emergency stop button."
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        Picture a smart coffee maker. Explain what its behavior would look like if built with a Topic, what it would look
+        like if built with a Service, and why Action is the best choice. Write at least one limitation of each approach.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="compare">
+    <h2><span class="num">1.6</span>Comparing the Three Communication Methods</h2>
+    <p>A mental image to keep with you forever: a Topic is like a radio, a Service is like a phone call with the bank, and an Action is like ordering a ride-hailing taxi.</p>
+
+    <div class="figure">
+      <svg viewBox="0 0 780 260" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect x="20" y="20" width="230" height="220" rx="14" fill="#f1efe8" stroke="#2f7de8" stroke-width="2"/>
+        <text x="135" y="55" fill="#2f7de8" font-size="17" font-family="Inter" text-anchor="middle" font-weight="800">Topic</text>
+        <text x="135" y="80" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Like a radio 📻</text>
+        <text x="135" y="115" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Publish</text>
+        <text x="135" y="140" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Publish</text>
+        <text x="135" y="165" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Publish</text>
+        <text x="135" y="190" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Publish...</text>
+        <text x="135" y="220" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Continuous stream, no reply</text>
+
+        <rect x="275" y="20" width="230" height="220" rx="14" fill="#f1efe8" stroke="#7c5cff" stroke-width="2"/>
+        <text x="390" y="55" fill="#7c5cff" font-size="17" font-family="Inter" text-anchor="middle" font-weight="800">Service</text>
+        <text x="390" y="80" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Like a call to the bank ☎️</text>
+        <text x="390" y="130" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Request →</text>
+        <text x="390" y="160" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">← Response</text>
+        <text x="390" y="220" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">One question, one answer, done</text>
+
+        <rect x="530" y="20" width="230" height="220" rx="14" fill="#f1efe8" stroke="#0f9d78" stroke-width="2"/>
+        <text x="645" y="55" fill="#0f9d78" font-size="17" font-family="Inter" text-anchor="middle" font-weight="800">Action</text>
+        <text x="645" y="80" fill="#7a7568" font-size="12" font-family="Inter" text-anchor="middle">Like ordering a taxi 🚕</text>
+        <text x="645" y="112" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Goal →</text>
+        <text x="645" y="136" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Feedback 20%</text>
+        <text x="645" y="158" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">Feedback 60%</text>
+        <text x="645" y="180" fill="#3c382f" font-size="12" font-family="Inter" text-anchor="middle">← Result: Done</text>
+        <text x="645" y="220" fill="#7a7568" font-size="11" font-family="Inter" text-anchor="middle">Goal, progress, result, cancellable</text>
+      </svg>
+      <figcaption>Figure 1.4 — The three ROS 2 communication patterns side by side.</figcaption>
+    </div>
+
+    <table>
+      <tr><th>Criterion</th><th>Topic</th><th>Service</th><th>Action</th></tr>
+      <tr><td>Pattern</td><td>Publish / Subscribe</td><td>Request / Response</td><td>Goal / Feedback / Result</td></tr>
+      <tr><td>Duration</td><td>Continuous</td><td>Instant and short</td><td>Long-running</td></tr>
+      <tr><td>Progress reporting</td><td>None (it's a stream itself)</td><td>None</td><td>Yes</td></tr>
+      <tr><td>Cancellable</td><td>No</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Example</td><td>Camera, LiDAR, IMU</td><td>Reset, Save, Calibrate</td><td>Navigate, Pick Object</td></tr>
+      <tr><td>Best suited for</td><td>Sensors and data streams</td><td>Instant operations and settings</td><td>Long-running robotic tasks</td></tr>
+    </table>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Perspective: a Design Decision</div>
+      <p>
+        When designing a new Node's architecture, ask yourself: "Is this data constantly changing, or does it only happen
+        based on a specific trigger?" If it's continuous → Topic. If it's instant and short → Service. If it's long-running
+        and needs interim reporting → Action. The wrong choice usually either floods the network with useless messages
+        (Topic instead of Service) or leaves the UI "locked with no feedback" (Service instead of Action).
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="parameter">
+    <h2><span class="num">1.7</span>Parameter — Tuning Behavior Without Changing Code</h2>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: DSLR Camera Settings</div>
+      <p>
+        On a professional camera, there are settings like ISO, shutter speed, and aperture. To change the ISO you don't
+        need to reprogram the camera's firmware; you just change one setting. <strong>Parameter</strong> in ROS 2 plays
+        exactly this role.
+      </p>
+    </div>
+
+    <h3>The problem without Parameter</h3>
+    <p>
+      The ARCHO team now knows when to use a Topic and when to use a Service and an Action. But a smaller, more annoying
+      problem still remains. One engineer hardcoded the robot's default speed directly into the code:
+      <code>robot_speed = 0.5;</code>. A month later, while testing the robot in a narrower corridor, they want to change
+      this value to 0.7. Without a Parameter, you'd have to open the file, edit the code, rebuild, and rerun — for one
+      small change, the entire development cycle repeats. With a Parameter, the code stays fixed and only the setting
+      value changes.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Parameter</div>
+      <p>
+        A <strong>Parameter</strong> is an adjustable value that controls a Node's behavior without changing the code.
+        Parameters are typically kept in YAML files so a piece of software can be deployed across several different
+        robots without rewriting code.
+      </p>
+    </div>
+
+    <pre><code># camera_params.yaml
+camera_node:
+  ros__parameters:
+    fps: 30
+    width: 1280
+    height: 720</code></pre>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: Three Sizes of the Same Robot</div>
+      <p>
+        Suppose you install the same motion software on three robots: a small robot with <code>max_speed = 0.4</code>, a
+        medium robot with <code>max_speed = 0.8</code>, and a large robot with <code>max_speed = 1.5</code>. The code is
+        identical; only the Parameter differs. In the ARCHO project, the Node called <code>motor_controller_node</code>
+        has parameters like <code>wheel_radius</code>, <code>wheel_base</code>, and <code>max_velocity</code>. If the
+        wheel diameter changes, we only change the value of <code>wheel_radius</code>; the control algorithm stays
+        untouched.
+      </p>
+    </div>
+
+    <h4>Parameter vs. Topic — the key difference</h4>
+    <p>
+      A simple analogy: a car's instantaneous speed (80 km/h) constantly changes — that's like a Topic. But setting
+      Cruise Control to 100 km/h might stay fixed for hours — that's like a Parameter. A Topic carries live, flowing
+      data; a Parameter holds relatively fixed settings.
+    </p>
+
+    <pre><code>ros2 param list
+ros2 param get /camera_node fps
+ros2 param set /camera_node fps 60</code></pre>
+
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        For the LiDAR Node on the ARCHO robot, propose three Parameters that would make sense (for example, detection
+        range, scan rate). For each one, explain why this value should be a Parameter rather than a fixed part of the
+        code.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="launch">
+    <h2><span class="num">1.8</span>Launch File — Starting the Whole System</h2>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: a Startup Script</div>
+      <p>
+        Every morning when you start work, you open several programs: a browser, email, a messaging tool, a code editor.
+        If you open them one by one every day, you'll be exhausted after a week. Instead, you build a script
+        (<code>start_work.sh</code>) that launches them all together. A <strong>Launch File</strong> does exactly this
+        for ROS 2.
+      </p>
+    </div>
+
+    <h3>The problem without Launch</h3>
+    <p>
+      By now ARCHO has seven or eight independent Nodes, each with its own Topics, Services, Actions, and Parameters. On
+      test day, an engineer has to run each one manually in a separate terminal window: first the camera, then the LiDAR,
+      then the IMU, then SLAM, then navigation, then the motor controller, then RViz. If the launch order is wrong or one
+      is forgotten, the robot won't work correctly. Now imagine this number is a hundred and fifty Nodes instead of
+      seven — this is exactly what happens on a real industrial robot. A real robot typically needs these Nodes running
+      simultaneously: <code>camera_node</code>, <code>lidar_node</code>, <code>imu_node</code>, <code>slam_node</code>,
+      <code>navigation_node</code>, <code>motor_controller</code>, and <code>rviz</code>. Manually running each one with
+      <code>ros2 run</code> is practically impossible for an industrial robot with hundreds of Nodes.
+    </p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Launch File</div>
+      <p>
+        A <strong>Launch File</strong> is a Python file that specifies which Nodes run, with what Parameters, in what
+        order, and under what conditions. Launch isn't just a sequential-execution script; it's an engine with
+        conditional logic.
+      </p>
+    </div>
+
+    <p>A Launch file can do the following:</p>
+    <ul>
+      <li>Run several Nodes simultaneously</li>
+      <li>Load Parameters from a YAML file</li>
+      <li>Open RViz or Gazebo</li>
+      <li>Run different Nodes based on a condition (for example, Simulation vs. real hardware)</li>
+      <li>Introduce delays or accept an input argument from the command line</li>
+    </ul>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: Simulation vs. the Real Robot</div>
+      <p>
+        Suppose the project has both a Simulation mode and a real-robot execution mode. With one simple condition in the
+        Launch File, if <code>simulation = true</code>, Gazebo, RViz, and a simulated controller run; if
+        <code>simulation = false</code>, the real camera, real LiDAR, and real motor driver run instead — same project, no
+        code changes.
+      </p>
+    </div>
+
+    <pre><code># robot.launch.py (just for familiarity; full details in the hands-on chapters)
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(package="camera_driver", executable="camera_node"),
+        Node(package="lidar_driver",  executable="lidar_node"),
+        Node(package="rviz2",         executable="rviz2"),
+    ])</code></pre>
+    <p>And running all of this with a single command:</p>
+    <pre><code>ros2 launch my_robot robot.launch.py</code></pre>
+
+    <h4>Folder structure of a real ROS 2 project</h4>
+    <p>When you open almost any professional ROS 2 project, this same pattern repeats:</p>
+    <pre><code>my_robot/
+├── launch/
+│   ├── robot.launch.py
+│   ├── simulation.launch.py
+│   └── navigation.launch.py
+├── config/
+│   ├── controller.yaml
+│   ├── nav2.yaml
+│   └── camera.yaml
+├── urdf/
+├── rviz/
+├── worlds/
+├── src/
+└── package.xml</code></pre>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Perspective</div>
+      <p>
+        Take this with you from this chapter: ROS isn't just programming. ROS is a combination of
+        <strong>software architecture</strong> (Node, Topic, Service, Action), <strong>communication</strong> (message
+        passing between processes), <strong>deployment</strong> (Launch File), and <strong>configuration</strong>
+        (Parameter and YAML). Someone who only writes code but doesn't know these four layers will never fully understand
+        a real robotic system.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        For the ARCHO robot, write a list of Nodes that should run together in a single Launch File (at least five
+        Nodes), and specify which ones should run only in Simulation mode and which ones should run only on real
+        hardware.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="architecture">
+    <h2><span class="num">1.9</span>The Complete Architecture Map</h2>
+    <p>
+      Now that we've seen each piece individually, let's put them all together. This is the diagram you should keep in
+      mind for the rest of the book — the backbone of ROS 2:
+    </p>
+
+    <div class="mermaid">
+flowchart TB
+    N["Node"]
+    N --> T["Topic<br/>Streaming"]
+    N --> S["Service<br/>Request / Reply"]
+    N --> A["Action<br/>Long Tasks"]
+    T --> M["Message"]
+    S --> RQ["Request"]
+    S --> RS["Response"]
+    A --> G["Goal"]
+    A --> F["Feedback"]
+    A --> R["Result"]
+    P["Parameter<br/>Node behavior configuration"] -.-> N
+    L["Launch File<br/>Starts the whole system"] --> N
+    L --> P
+    style N fill:#2f7de8,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style P fill:#d98c19,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style L fill:#7c5cff,stroke:#ffffff,color:#0b1220,font-weight:bold
+    </div>
+
+    <p>
+      For every new Node you build in the ARCHO project or any other project, ask yourself these four questions; if you
+      can answer them, you've truly understood that Node's architecture:
+    </p>
+    <ol>
+      <li>What Topics does it publish?</li>
+      <li>What Topics does it subscribe to?</li>
+      <li>What Services or Actions does it provide or call?</li>
+      <li>What Parameters control its behavior?</li>
+    </ol>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">1.10</span>Chapter 1 Summary</h2>
+
+    <h3>What we learned</h3>
+    <p>
+      Congratulations — you now know the seven main pillars of ROS 2 architecture: <strong>Node</strong> as the
+      independent execution unit, <strong>Topic</strong> and <strong>Message</strong> for a continuous data stream,
+      <strong>Service</strong> for instant request/response, <strong>Action</strong> for long-running, cancellable
+      operations, <strong>Parameter</strong> for tuning behavior without changing code, and <strong>Launch File</strong>
+      for starting the whole system with a single command. So far we've only learned the city map; we haven't entered the
+      city yet.
+    </p>
+
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning Checkpoint</strong>
+      <ul>
+        <li>I can say in one sentence what a Node is and why we split a system into several Nodes.</li>
+        <li>I can explain the difference between Topic and Service with a real example.</li>
+        <li>I know why Action is needed for long-running operations and why Service isn't enough.</li>
+        <li>I can explain how Parameter differs from Topic.</li>
+        <li>I know what a Launch File does and why it's more than just a simple script.</li>
+        <li>For a hypothetical Node, I can say what Topics, Services, Actions, and Parameters it might have.</li>
+      </ul>
+    </div>
+
+    <h3>Connection to the main project</h3>
+    <p>
+      <span class="badge-project">ARCHO Project</span> In this chapter, we only designed the robot's communication
+      skeleton on paper: which Node talks to which Node via a Topic, which tasks should be Services, and which should be
+      Actions. We haven't written any code yet, and no Node has run on a system.
+    </p>
+
+    <h3>What the next chapter adds</h3>
+    <p>
+      From Chapter 2 onward, we enter the hands-on world: building a Workspace from scratch, examining its structure,
+      creating our first Package, writing our first real Node in Python, running it, and watching our first Publisher and
+      Subscriber with our own eyes. From that point on, every concept you learn will immediately run on your own
+      system — that's where ROS 2 turns from a set of concepts into a real tool for building robots.
+    </p>
+
+    <h3>Chapter 1 Glossary</h3>
+    <dl class="glossary">
+      <dt>Node</dt><dd>An independent process in ROS 2 with one clear responsibility.</dd>
+      <dt>Topic</dt><dd>A named channel for continuously publishing data between Nodes.</dd>
+      <dt>Message</dt><dd>The data format carried over a Topic.</dd>
+      <dt>Publisher</dt><dd>A Node that publishes data on a Topic.</dd>
+      <dt>Subscriber</dt><dd>A Node that listens to a Topic and receives data.</dd>
+      <dt>Service</dt><dd>A two-way request/response communication between a Client and a Server.</dd>
+      <dt>Action</dt><dd>A long-running operation with progress reports (Feedback) and the ability to cancel.</dd>
+      <dt>Parameter</dt><dd>An adjustable value that controls a Node's behavior without changing the code.</dd>
+      <dt>Launch File</dt><dd>A Python file that manages the simultaneous launch of several Nodes and the loading of settings.</dd>
+    </dl>
+
+    <h3>Chapter 1 Common Mistakes — Summary</h3>
+    <ul>
+      <li>Dumping all of the robot's logic into one big Node instead of splitting responsibilities.</li>
+      <li>Using a Topic for operations that only happen once, on request.</li>
+      <li>Using a Service for operations that are long-running and need progress reporting.</li>
+      <li>Hardcoding changeable values (like speed or thresholds) directly in code instead of using a Parameter.</li>
+      <li>Running Nodes manually, one by one, instead of using a single cohesive Launch File.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 1 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Development Environment — Workspace and Package →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#f1efe8',
+      primaryColor: '#e7f0fe',
+      primaryTextColor: '#211f1a',
+      primaryBorderColor: '#2f7de8',
+      lineColor: '#0f9d78',
+      secondaryColor: '#e7f0fe',
+      tertiaryColor: '#f1efe8',
+      fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

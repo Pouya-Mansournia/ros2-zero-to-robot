@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 2 — The ROS 2 Development Environment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#fffefb;
+    --panel2:#f1efe8;
+    --border:#e6e1d6;
+    --text:#211f1a;
+    --muted:#7a7568;
+    --accent:#3d4bf5;
+    --accent-ink:#2732b8;
+    --accent2:#0e9e6e;
+    --gold:#c8862c;
+    --danger:#d64a3c;
+    --purple:#8b5cf6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.85;
+    font-size:17.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+
+  /* Cover */
+  .cover{
+    border-radius:28px;
+    background:#12142b;
+    padding:64px 44px;
+    margin-bottom:56px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .cover::before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px);
+    z-index:0;
+  }
+  .cover::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index:0;
+  }
+  .cover > *{position:relative; z-index:1;}
+  .kicker{
+    display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px;
+    margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
+    padding:6px 14px; border-radius:999px;
+  }
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0;
+    padding:7px 15px; border-radius:999px; font-size:.83em;
+  }
+
+  h2{
+    font-size:1.9em; font-weight:800; margin:72px 0 22px;
+    display:flex; align-items:center; gap:14px; letter-spacing:-.3px;
+  }
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;}
+  strong{color:var(--text); font-weight:700;}
+
+  a{color:var(--accent);}
+
+  /* Callout boxes */
+  .box{
+    border-radius:16px; padding:20px 24px; margin:22px 0;
+    border:1px solid var(--border); background:var(--panel);
+    position:relative;
+    box-shadow:0 1px 2px rgba(33,31,26,0.03);
+  }
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;}
+  .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;}
+  .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;}
+  .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;}
+  .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;}
+  .box.def .box-title{color:var(--gold);}
+
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{
+    background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px;
+    padding:2px 7px; font-size:.87em; color:var(--accent-ink);
+    display:inline-block;
+  }
+  pre{
+    background:#181a2e; border-radius:16px;
+    padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65;
+    box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);
+  }
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;}
+  li{margin-bottom:7px;}
+
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+
+  .checkpoint{
+    border-radius:16px; padding:22px 24px; margin:26px 0;
+    background:#eafaf3; border:1px solid #c9eeda;
+  }
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;}
+  .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+
+  .exercise{
+    border-radius:14px; padding:18px 22px; margin:16px 0;
+    background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);
+  }
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;}
+  .glossary dd{margin:4px 0 0; color:var(--muted);}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;}
+  .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+
+  .footer-nav{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:.9em;
+  }
+
+  .badge-project{
+    display:inline-block; background:#fdf3e4;
+    border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;
+  }
+
+  /* Terminal mockup */
+  .term{
+    background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0;
+    box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);
+  }
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;}
+  .term-out{color:#9aa0c8;}
+
+  @media print{
+    body{background:#fff; color:#000;}
+  }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Textbook</div>
+    <h1>Chapter 2: The ROS 2 Development Environment</h1>
+    <div class="subtitle">From a mental map to your first real Node on your own system</div>
+    <div class="meta-row">
+      <div class="chip">Audience: Beginner to robotics engineer</div>
+      <div class="chip">Prerequisite: Chapter 1 (ROS 2 Architecture)</div>
+      <div class="chip">Running project: ARCHO robot</div>
+      <div class="chip">Reading time: 70–90 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#big-picture"><span>2.1</span>From map to city — why this chapter is different</a>
+    <a href="#workspace"><span>2.2</span>Workspace — the project's factory</a>
+    <a href="#package"><span>2.3</span>Package — the organized unit of code</a>
+    <a href="#node"><span>2.4</span>Your first real Node — line by line</a>
+    <a href="#build"><span>2.5</span>Building and running with colcon</a>
+    <a href="#inspect"><span>2.6</span>Observing a Node from outside</a>
+    <a href="#summary"><span>2.7</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">2.1</span>From Map to City</h2>
+    <p>
+      By the time you finished Chapter 1, you had ARCHO's architectural map in your head: you knew what a Node was, what a Topic was,
+      when to use a Service, and when to use an Action. But a map, by itself, never moves a robot. Now it's time to
+      actually enter the city: open a folder on your own system, write a Python file, and for the first time see
+      the word <code>Node</code> — which until now was just an abstract concept — become a real, living process
+      that you can see in the terminal, stop, and run again.
+    </p>
+    <p>
+      This chapter has three stops: first we learn what a <strong>Workspace</strong> is and why every project
+      needs one; then we move into <strong>Package</strong>, the smallest buildable unit in ROS 2;
+      and finally we read the ARCHO team's first real <strong>Node</strong> line by line, build it, and run it
+      on the system.
+    </p>
+
+    <div class="mermaid">
+flowchart RL
+    A["Workspace<br/>Main project folder"] --> B["Package<br/>Organized unit of code"]
+    B --> C["Node<br/>simple_node.py"]
+    C --> D["colcon build"]
+    D --> E["ros2 run"]
+    E --> F["Chapter 3: Real Publisher and Subscriber"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style F fill:#eafaf3,stroke:#0e9e6e,color:#211f1a,font-weight:bold
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="workspace">
+    <h2><span class="num">2.2</span>Workspace — The Project's Factory</h2>
+
+    <h3>The problem: a messy folder called Desktop</h3>
+    <p>
+      Imagine it's the ARCHO team's first day of writing code. One team member, without much thought,
+      dumps everything straight onto the Desktop: <code>camera.cpp</code>, <code>main.py</code>, <code>lidar_driver.cpp</code>,
+      <code>motor.py</code>, <code>map.yaml</code>. A week later, nobody knows which file belongs to which
+      part of the robot, which version is the latest, or which one should even be compiled. This is exactly the
+      wall every team runs into, sooner or later, without a clear folder structure.
+    </p>
+    <p>The solution is simple: create a main folder and keep everything organized inside it. ROS 2 has formalized exactly this idea under the name <strong>Workspace</strong>.</p>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Workspace</div>
+      <p>
+        A <strong>Workspace</strong> is the main folder that holds all of a project's ROS packages, build files,
+        and final outputs. Each independent project (say, ARCHO versus a different robotic arm)
+        usually has its own separate Workspace.
+      </p>
+    </div>
+
+    <p>When you create a Workspace, you'll see these four folders:</p>
+    <pre><code>archo_ws/
+├── src/
+├── build/
+├── install/
+└── log/</code></pre>
+
+    <table>
+      <tr><th>Folder</th><th>Role</th><th>How much do you edit it by hand?</th></tr>
+      <tr><td><code>src/</code></td><td>Home of all your code; each Package is a subfolder here</td><td>Almost always — 95% of your work happens here</td></tr>
+      <tr><td><code>build/</code></td><td>Temporary compilation files</td><td>Almost never</td></tr>
+      <tr><td><code>install/</code></td><td>Final, runnable version of the project after building</td><td>Only for sourcing</td></tr>
+      <tr><td><code>log/</code></td><td>Reports from every build and run</td><td>Only when debugging a build error</td></tr>
+    </table>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: The Factory</div>
+      <p>
+        Think of the Workspace as a factory. <code>src</code> is where the engineers design things;
+        <code>build</code> is the factory's assembly line that turns raw parts into products; <code>install</code>
+        is the warehouse holding the finished, ready-to-ship product; and <code>log</code> is the factory's daily
+        report ledger. If a product comes out defective one day, you first check the <code>log</code> reports
+        to see where in the production line the problem occurred.
+      </p>
+    </div>
+
+    <div class="box real">
+      <div class="box-title">🌍 Multiple Workspaces for Multiple Purposes</div>
+      <p>
+        In real projects, you usually have more than one Workspace on your system at the same time — for example,
+        <code>~/archo_ws</code> for the robot's main code, and <code>~/simulation_ws</code> for simulation
+        experiments that aren't yet ready to merge with the main code. This separation keeps unfinished
+        experiments from mixing with stable code.
+      </p>
+    </div>
+
+    <h4>Now let's move to your own system</h4>
+    <p>Open a terminal and run these commands in order:</p>
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> cd ~/archo_ws
+<span class="term-prompt">dev@archo:~/archo_ws$</span> tree -L 1
+<span class="term-out">.
+├── build
+├── install
+├── log
+└── src
+
+5 directories, 0 files</span>
+
+<span class="term-prompt">dev@archo:~/archo_ws$</span> ls src
+<span class="term-out">archo_bringup</span>
+      </div>
+    </div>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ A Note on Uppercase and Lowercase</div>
+      <p>
+        If you mistype <code>tree -L 1</code> as, say, <code>tree -l 1</code> (lowercase l), Linux thinks
+        <code>1</code> is a folder name and prints <code>[error opening dir]</code>. The uppercase <code>-L</code>
+        means "only show folders down to this depth" — this is one of the most common first-day typos.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Easy Exercise</div>
+      <p>
+        In your own terminal, run: <code>cd ~/archo_ws</code>, then <code>pwd</code>, then <code>tree -L 1</code>
+        and <code>ls src</code>. Note the output of each, and say which folder is likely to see the most daily
+        changes.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="package">
+    <h2><span class="num">2.3</span>Package — The Organized Unit of Code</h2>
+    <p>
+      If the Workspace is the factory, a <strong>Package</strong> is one of the units inside that factory. A real
+      robot like ARCHO usually has several independent Packages, not one giant folder:
+    </p>
+    <pre><code>archo_ws/
+└── src/
+    ├── archo_description   # Physical model and URDF
+    ├── archo_bringup       # Launches the whole system
+    ├── archo_control       # Motor and motion control
+    ├── archo_navigation     # Nav2 configuration and path planning
+    ├── archo_sensors       # Camera, LiDAR, IMU drivers
+    └── archo_interfaces    # Custom Message/Service/Action definitions</code></pre>
+
+    <div class="box def">
+      <div class="box-title">📖 Definition: Package</div>
+      <p>
+        A <strong>Package</strong> is the smallest organized, buildable unit in ROS 2. A Package can
+        contain Nodes, Python or C++ code, Launch files, Parameter definitions, Messages, Services, Actions, URDF
+        files, RViz configurations, and tests.
+      </p>
+    </div>
+
+    <p>Go into the ARCHO team's first Package and look at its structure:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~$</span> cd ~/archo_ws/src/archo_bringup
+<span class="term-prompt">dev@archo:~/archo_ws/src/archo_bringup$</span> tree -L 3
+<span class="term-out">archo_bringup/
+├── archo_bringup/
+│   ├── __init__.py
+│   └── simple_node.py
+├── package.xml
+├── resource/
+├── setup.cfg
+├── setup.py
+└── test/</span>
+      </div>
+    </div>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why Do We Have Two Folders With the Same Name?</div>
+      <p>
+        Seeing <code>archo_bringup/archo_bringup/</code> is not a mistake. The outer folder is the ROS 2
+        Package itself; the inner folder is the Python module that the actual Nodes live inside.
+      </p>
+      <pre><code>ROS Package
+└── Python Module
+    └── ROS Nodes</code></pre>
+    </div>
+
+    <h4>Important Package Files</h4>
+    <table>
+      <tr><th>File</th><th>Role</th></tr>
+      <tr><td><code>package.xml</code></td><td>The Package's identity card: name, version, description, maintainer, dependencies</td></tr>
+      <tr><td><code>setup.py</code></td><td>Tells Python and ROS the Package's name, which files to install, and which Nodes are runnable</td></tr>
+      <tr><td><code>setup.cfg</code></td><td>Specifies where Python executable files get installed</td></tr>
+      <tr><td><code>__init__.py</code></td><td>Tells Python this folder is a module; it must exist even if empty</td></tr>
+    </table>
+
+    <p>To figure out whether a Package was built with Python or C++, just check this:</p>
+    <pre><code>grep build_type package.xml
+# &lt;build_type&gt;ament_python&lt;/build_type&gt;   → Python
+# &lt;build_type&gt;ament_cmake&lt;/build_type&gt;    → usually C++</code></pre>
+
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Perspective: Package vs. Node</div>
+      <p>
+        Don't confuse the two. A Workspace can hold several Packages, and a Package can hold several Nodes —
+        for example, <code>archo_sensors</code> could contain <code>camera_node</code>, <code>imu_node</code>,
+        and <code>battery_node</code> all at once. But in professional projects, it's better for each Package
+        to stay focused on a single area of responsibility rather than growing too big and disorganized.
+      </p>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Intermediate Exercise</div>
+      <p>
+        Inside <code>archo_bringup</code>, run <code>grep build_type package.xml</code> and <code>cat setup.py</code>.
+        In <code>setup.py</code>, look for the line with <code>console_scripts</code> and say what name it
+        registers for running the Node.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="node">
+    <h2><span class="num">2.4</span>Your First Real Node — Line by Line</h2>
+    <p>
+      Inside ARCHO's <code>setup.py</code>, you'll see this line:
+    </p>
+    <pre><code>entry_points={
+    'console_scripts': [
+        'simple_node = archo_bringup.simple_node:main',
+    ],
+},</code></pre>
+    <p>This one line carries three important messages you should be able to unpack separately:</p>
+    <table>
+      <tr><th>Part</th><th>Meaning</th></tr>
+      <tr><td><code>simple_node</code> (left side)</td><td>The name you use with <code>ros2 run</code></td></tr>
+      <tr><td><code>archo_bringup.simple_node</code></td><td>The file path: <code>archo_bringup/simple_node.py</code></td></tr>
+      <tr><td><code>:main</code></td><td>When the Node runs, the <code>main()</code> function should be called</td></tr>
+    </table>
+
+    <p>Now let's open the contents of <code>simple_node.py</code>:</p>
+    <pre><code>import rclpy
+from rclpy.node import Node
+
+
+class SimpleNode(Node):
+    def __init__(self):
+        super().__init__('simple_node')
+        self.get_logger().info('Hello from ARCHO — first node alive!')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SimpleNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()</code></pre>
+
+    <p>Now let's go through it line by line — the way an experienced engineer would review a new teammate's code.</p>
+
+    <h4><code>import rclpy</code></h4>
+    <p>
+      <code>rclpy</code> is the core ROS 2 library for Python — short for <em>ROS Client Library for Python</em>.
+      Its C++ counterpart is called <code>rclcpp</code>. Without <code>rclpy</code>, your Python program is
+      just an ordinary script with no way to connect to the ROS 2 network.
+    </p>
+
+    <h4><code>from rclpy.node import Node</code></h4>
+    <p>
+      Here we import the ready-made <code>Node</code> class — the same class we discussed in Chapter 1.
+      This class already provides capabilities like creating Publishers, Subscribers, Services, Actions,
+      Parameters, Timers, and Loggers; we simply inherit from it.
+    </p>
+
+    <h4><code>class SimpleNode(Node):</code> and <code>super().__init__('simple_node')</code></h4>
+    <p>
+      There's an important distinction here that a lot of beginners mix up: <code>SimpleNode</code> is the
+      Python class name, but <code>simple_node</code> (inside <code>super().__init__</code>) is the name this
+      Node is known by on the <strong>ROS 2 network</strong>. That's why, when you later run
+      <code>ros2 node list</code>, you'll see <code>/simple_node</code>, not <code>SimpleNode</code>.
+    </p>
+
+    <h4><code>self.get_logger().info(...)</code></h4>
+    <p>
+      This line prints a message using ROS's built-in logging system. You could use Python's <code>print()</code>
+      instead, but the Logger has several advantages: it shows the Node's name, marks the message's severity level,
+      timestamps it, and lets you follow the messages on the <code>/rosout</code> Topic as well.
+    </p>
+    <table>
+      <tr><th>Level</th><th>Use</th></tr>
+      <tr><td><code>debug()</code></td><td>Technical detail, for development only</td></tr>
+      <tr><td><code>info()</code></td><td>Normal status and ordinary messages</td></tr>
+      <tr><td><code>warning()</code></td><td>Possible problem ahead</td></tr>
+      <tr><td><code>error()</code></td><td>An error that occurred</td></tr>
+      <tr><td><code>fatal()</code></td><td>A very serious error that makes continuing impossible</td></tr>
+    </table>
+
+    <h4>The <code>main()</code> Function — The Heart of Execution</h4>
+    <p>The order of the five lines inside <code>main()</code> matters a great deal, and this same pattern always repeats:</p>
+    <div class="mermaid">
+flowchart TB
+    A["rclpy.init()<br/>Connect the program to the ROS 2 network"] --> B["node = SimpleNode()<br/>Actually create the Node"]
+    B --> C["rclpy.spin(node)<br/>Keep the Node alive and listening for events"]
+    C --> D["node.destroy_node()<br/>After Ctrl+C, clean shutdown"]
+    D --> E["rclpy.shutdown()<br/>Disconnect from ROS 2"]
+    style A fill:#eef0ff,stroke:#3d4bf5,color:#211f1a
+    style C fill:#fdf3e4,stroke:#c8862c,color:#211f1a,font-weight:bold
+    style E fill:#eafaf3,stroke:#0e9e6e,color:#211f1a
+    </div>
+
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: The Phone Operator</div>
+      <p>
+        Think of <code>rclpy.spin(node)</code> like hiring a phone operator. Without <code>spin()</code>,
+        the operator walks into the office, says one sentence, and immediately goes home — the Node gets
+        created, the message gets printed, and it shuts down right away. But <code>spin()</code> says: "stay
+        by the phone and wait for calls." Those "calls" are exactly what later show up as Messages, Service
+        requests, Timer firings, or an Action Goal.
+      </p>
+    </div>
+
+    <p>
+      And finally, at the end of the file, <code>if __name__ == '__main__': main()</code> is just a standard
+      Python idiom: if this file is run directly (not through <code>ros2 run</code>), <code>main()</code>
+      still gets called.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="build">
+    <h2><span class="num">2.5</span>Building and Running with colcon</h2>
+    <p>
+      When a file inside <code>src</code> changes, ROS still doesn't know about the installed version yet.
+      We need to build the Workspace from the root:
+    </p>
+    <pre><code>cd ~/archo_ws
+colcon build --packages-select archo_bringup</code></pre>
+
+    <div class="box def">
+      <div class="box-title">📖 What is colcon?</div>
+      <p>
+        <strong>colcon</strong> is the official ROS 2 build tool. Its job is to find all Packages inside
+        <code>src</code>, check their dependencies, compile them, build the <code>install</code> folder, and
+        register the executable files. Running <code>colcon build</code> alone builds every Package; adding
+        <code>--packages-select</code> builds just one, saving a lot of time on large projects.
+      </p>
+    </div>
+
+    <p>After building, you need to "activate" the Workspace so the terminal knows where these Packages live:</p>
+    <pre><code>source install/setup.bash</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Important Note</div>
+      <p>
+        Every new terminal you open needs you to run <code>cd ~/archo_ws</code> and
+        <code>source install/setup.bash</code> again. Forgetting this step is the most common cause of a
+        "Package not found" message in the first few days.
+      </p>
+    </div>
+
+    <p>Now run the Node:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">dev@archo:~/archo_ws$</span> ros2 run archo_bringup simple_node
+<span class="term-out">[INFO] [simple_node]: Hello from ARCHO — first node alive!</span>
+      </div>
+    </div>
+    <p>
+      The Node stays running after printing the message — this is normal, because <code>rclpy.spin(node)</code>
+      is still executing. Press <code>Ctrl+C</code> to stop it.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="inspect">
+    <h2><span class="num">2.6</span>Observing a Node from Outside</h2>
+    <p>
+      This section covers one of the important habits you should build from the very start: check every Node you
+      run from a second terminal as well. Keep the first terminal open (the Node is still running), open a second
+      terminal, and:
+    </p>
+    <pre><code>source /opt/ros/jazzy/setup.bash
+cd ~/archo_ws
+source install/setup.bash
+ros2 node list</code></pre>
+    <p>You should see <code>/simple_node</code>. For more complete information:</p>
+    <pre><code>ros2 node info /simple_node</code></pre>
+    <p>
+      The output shows a list of this Node's Subscribers, Publishers, Service Servers and Clients, and Action
+      Servers and Clients — for now, they're all empty, since this Node only prints a message. But you'll
+      probably see two internal ROS Topics as well: <code>/parameter_events</code> and <code>/rosout</code>.
+    </p>
+
+    <div class="box real">
+      <div class="box-title">🌍 Even Logging Travels Over a Topic</div>
+      <p>
+        When you call <code>self.get_logger().info(...)</code>, the message is not only printed in the terminal
+        but also published on the <code>/rosout</code> Topic. If you run this in a second terminal:
+      </p>
+      <pre><code>ros2 topic echo /rosout</code></pre>
+      <p>
+        You'll see the same log messages live. This shows that even the logging system is built on the same
+        Publish/Subscribe infrastructure from Chapter 1 — in ROS 2, almost everything, even internal
+        logging, relies on the same handful of core concepts.
+      </p>
+    </div>
+
+    <div class="figure">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect x="20" y="20" width="330" height="220" rx="16" fill="#181a2e"/>
+        <circle cx="42" cy="42" r="6" fill="#ff5f57"/>
+        <circle cx="60" cy="42" r="6" fill="#febc2e"/>
+        <circle cx="78" cy="42" r="6" fill="#28c840"/>
+        <text x="35" y="75" fill="#7ee7c7" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">$ ros2 run archo_bringup simple_node</text>
+        <text x="35" y="100" fill="#9aa0c8" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">[INFO] [simple_node]:</text>
+        <text x="35" y="120" fill="#9aa0c8" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">Hello from ARCHO...</text>
+        <text x="35" y="160" fill="#5b6089" font-size="11" font-family="'JetBrains Mono'" text-anchor="start">(node stays alive — spin)</text>
+        <text x="185" y="205" fill="#d8dcff" font-size="12" font-family="Inter" text-anchor="middle">Terminal 1 — Running the Node</text>
+
+        <rect x="410" y="20" width="330" height="220" rx="16" fill="#181a2e"/>
+        <circle cx="432" cy="42" r="6" fill="#ff5f57"/>
+        <circle cx="450" cy="42" r="6" fill="#febc2e"/>
+        <circle cx="468" cy="42" r="6" fill="#28c840"/>
+        <text x="425" y="75" fill="#7ee7c7" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">$ ros2 node list</text>
+        <text x="425" y="95" fill="#9aa0c8" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">/simple_node</text>
+        <text x="425" y="125" fill="#7ee7c7" font-size="12" font-family="'JetBrains Mono'" text-anchor="start">$ ros2 topic echo /rosout</text>
+        <text x="425" y="145" fill="#9aa0c8" font-size="11" font-family="'JetBrains Mono'" text-anchor="start">msg: "Hello from ARCHO..."</text>
+        <text x="575" y="205" fill="#d8dcff" font-size="12" font-family="Inter" text-anchor="middle">Terminal 2 — Live Inspection</text>
+      </svg>
+      <figcaption>Figure 2.1 — Always inspect a Node from a second terminal as well; this habit later becomes essential for debugging complex Nodes.</figcaption>
+    </div>
+
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        Run the Node in the first terminal, then run <code>ros2 node info /simple_node</code> in a second
+        terminal. Note the full output and explain why this Node's Publishers and Subscribers (aside from ROS's
+        internal ones) are empty.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">2.7</span>Chapter 2 Summary</h2>
+    <p>
+      You've walked the whole path so far: you created a <strong>Workspace</strong>, found a <strong>Package</strong>
+      inside it and dissected it, read ARCHO's first real <strong>Node</strong> line by line, built it with
+      <code>colcon build</code>, ran it with <code>ros2 run</code>, and inspected it live from a second terminal.
+      This was the first time you touched Chapter 1's abstract concepts on your own real system.
+    </p>
+
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning Checkpoint</strong>
+      <ul>
+        <li>I can explain what a Workspace is and why every project needs one.</li>
+        <li>I know the role of each of the src, build, install, and log folders.</li>
+        <li>I can tell a Package apart from a Node and explain how they relate.</li>
+        <li>I can explain a simple rclpy file line by line.</li>
+        <li>I know why rclpy.spin() is needed and what happens without it.</li>
+        <li>I can build, run, and inspect a Node from a second terminal.</li>
+      </ul>
+    </div>
+
+    <h3>Connection to the Main Project</h3>
+    <p>
+      <span class="badge-project">ARCHO Project</span> now has its first Package and first real Node —
+      it still only prints a "hello" message, but the Workspace and Package infrastructure is ready for us to
+      turn this quiet Node into a real Publisher in the next chapter.
+    </p>
+
+    <h3>What the Next Chapter Adds</h3>
+    <p>
+      In Chapter 3, we'll turn this same <code>simple_node</code> into a Publisher that publishes a Message
+      on a real Topic every second, and build a separate Subscriber to receive it. For the first time, you'll
+      see with your own eyes two independent Nodes — exactly as described in Chapter 1 — talking to each other.
+    </p>
+
+    <h3>Chapter 2 Glossary</h3>
+    <dl class="glossary">
+      <dt>Workspace</dt><dd>The main folder holding all the Packages, build files, and outputs of a ROS 2 project.</dd>
+      <dt>Package</dt><dd>The smallest organized, buildable unit in ROS 2; can contain Nodes, Launch files, Parameters, and more.</dd>
+      <dt>colcon</dt><dd>The official ROS 2 build tool that compiles and installs the Packages inside src.</dd>
+      <dt>rclpy</dt><dd>The ROS 2 client library for Python; the bridge between a Python program and the ROS 2 network.</dd>
+      <dt>spin()</dt><dd>The function that keeps a Node alive and waiting for ROS events (Messages, Services, Timers, Actions).</dd>
+      <dt>Logger</dt><dd>ROS's built-in logging system, which publishes messages on the /rosout Topic in addition to printing them in the terminal.</dd>
+      <dt>entry_points</dt><dd>The part of setup.py that links a Node's runnable name to its file and main function.</dd>
+    </dl>
+
+    <h3>Common Chapter 2 Mistakes — Summary</h3>
+    <ul>
+      <li>Forgetting <code>source install/setup.bash</code> after opening a new terminal.</li>
+      <li>Confusing the Python class name (<code>SimpleNode</code>) with the ROS network Node name (<code>simple_node</code>).</li>
+      <li>Removing <code>rclpy.spin()</code> and being surprised the Node shuts down immediately.</li>
+      <li>Building the entire Workspace with a plain <code>colcon build</code> instead of <code>--packages-select</code> on large projects, wasting a lot of time.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 2 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Real Publisher and Subscriber →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#f1efe8',
+      primaryColor: '#eef0ff',
+      primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5',
+      lineColor: '#0e9e6e',
+      secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb',
+      textColor: '#211f1a',
+      fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

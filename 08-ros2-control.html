@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 8 — ros2_control: From Command to Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Textbook</div>
+    <h1>Chapter 8: ros2_control</h1>
+    <div class="subtitle">The translator between ROS algorithms and real or virtual motors</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 7 (Gazebo)</div>
+      <div class="chip">Running project: ARCHO robot</div>
+      <div class="chip">Tool: controller_manager</div>
+      <div class="chip">Reading time: 100–120 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What we'll cover in this chapter</strong>
+    <a href="#big-picture"><span>8.1</span>What Actually Turns the Motor?</a>
+    <a href="#architecture"><span>8.2</span>The Four-Layer Architecture</a>
+    <a href="#controllers"><span>8.3</span>Four Well-Known Controllers</a>
+    <a href="#interfaces"><span>8.4</span>Command and State Interfaces Inside the URDF</a>
+    <a href="#config"><span>8.5</span>Full diff_drive_controller Configuration</a>
+    <a href="#sim-vs-real"><span>8.6</span>Simulation and the Real Robot: One Architecture, Two Hardware Layers</a>
+    <a href="#mistakes"><span>8.7</span>Common ros2_control Mistakes</a>
+    <a href="#summary"><span>8.8</span>Summary, Glossary, and Exercises</a>
+  </div>
+
+  <section id="big-picture">
+    <h2><span class="num">8.1</span>What Actually Turns the Motor?</h2>
+    <p>
+      So far we've built up many layers of ARCHO: URDF/Xacro defined the robot's structure, TF2 tracked the
+      position of its parts, RViz displayed it, and Gazebo simulated the physics. But one big question
+      remains unanswered: when we say "move forward at 0.5 meters per second," how does that simple number
+      actually turn into the real rotation of two motors?
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 Definition: ros2_control</div>
+      <p>
+        <strong>ros2_control</strong> is a standard framework for controlling robot hardware — a layer that
+        sits between high-level ROS 2 algorithms (like Nav2) and the robot's real or virtual hardware, and
+        translates software commands into a language the motors understand.
+      </p>
+    </div>
+    <div class="box idea">
+      <div class="box-title">🧠 Simple Analogy: The Factory Manager and the Industrial Machine</div>
+      <p>
+        Suppose a factory manager tells a worker, "produce this product faster." But the industrial machine
+        itself only understands commands like <code>Motor speed = 1500 rpm</code> or
+        <code>Valve = Open</code>. Someone has to translate the high-level order into a precise machine
+        command. Nav2 is that manager; the motor is that industrial machine; and ros2_control is the
+        technical supervisor that translates between them.
+      </p>
+    </div>
+    <table>
+      <tr><th>Comparison</th><th>Question It Asks</th></tr>
+      <tr><td>Nav2 (later chapters)</td><td>Where should the robot go?</td></tr>
+      <tr><td>MoveIt (Chapter 13)</td><td>What path should the arm follow?</td></tr>
+      <tr><td>ros2_control</td><td>How exactly should the joints execute that motion?</td></tr>
+      <tr><td>Motor Driver</td><td>How does the low-level hardware send the command over the wire?</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="architecture">
+    <h2><span class="num">8.2</span>The Four-Layer Architecture</h2>
+    <div class="mermaid">
+flowchart TB
+    A["Nav2 / MoveIt / Teleop<br/>High-level command"] --> B["Controller Manager<br/>Chief of all controllers"]
+    B --> C["Controllers<br/>diff_drive_controller and similar"]
+    C --> D["Hardware Interface<br/>Virtual or real"]
+    D --> E["Motors / Encoders / Sensors"]
+    style B fill:#eef0ff,stroke:#3d4bf5,color:#211f1a,font-weight:bold
+    style D fill:#fdf3e4,stroke:#c8862c,color:#211f1a
+    </div>
+    <p>
+      The <strong>Controller Manager</strong> is the heart of ros2_control: it's responsible for loading,
+      activating, and deactivating Controllers, managing the control loop, and reading/writing to hardware
+      on every cycle. In the previous chapter, we used the command
+      <code>ros2 control list_controllers</code> to ask this very Node which Controllers were active.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="controllers">
+    <h2><span class="num">8.3</span>Four Well-Known Controllers</h2>
+    <table>
+      <tr><th>Controller</th><th>Works With</th><th>Task</th></tr>
+      <tr><td><code>joint_state_broadcaster</code></td><td>Every Joint</td><td>Publishes each Joint's instantaneous state on <code>/joint_states</code></td></tr>
+      <tr><td><code>diff_drive_controller</code></td><td>Differential-drive robots (ARCHO)</td><td>Takes <code>/cmd_vel</code> and converts it into separate left/right wheel speeds</td></tr>
+      <tr><td><code>joint_trajectory_controller</code></td><td>Robotic arms</td><td>Receives a time-scheduled trajectory of joint angles and executes it smoothly</td></tr>
+      <tr><td><code>forward_command_controller</code></td><td>Any Joint (for testing)</td><td>Sends a command almost directly to the Joint</td></tr>
+    </table>
+
+    <div class="box real">
+      <div class="box-title">🌍 Why joint_state_broadcaster Matters So Much</div>
+      <p>
+        This Controller completes the loop we saw in Chapter 5: <code>Encoders → ros2_control →
+        /joint_states → robot_state_publisher → TF tree → RViz</code>. Without this Controller,
+        <code>robot_state_publisher</code> never finds out how far ARCHO's wheels have actually turned, and
+        the model in RViz stays frozen even if the robot is really moving.
+      </p>
+    </div>
+
+    <p>Each Joint is typically controlled through one of three modes:</p>
+    <table>
+      <tr><th>Command Type</th><th>Meaning</th><th>Example Use</th></tr>
+      <tr><td>Position</td><td>Move the joint to this angle</td><td>Robot arm, servo motor</td></tr>
+      <tr><td>Velocity</td><td>Spin the joint at this speed</td><td>ARCHO's wheels</td></tr>
+      <tr><td>Effort</td><td>Apply this amount of force/torque</td><td>Force control in industrial arms</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="interfaces">
+    <h2><span class="num">8.4</span>Command and State Interfaces Inside the URDF</h2>
+    <p>In the previous chapter we saw the block below inside the Xacro — now let's unpack exactly what each line means:</p>
+    <pre><code>&lt;ros2_control name="ArchoGazeboSystem" type="system"&gt;
+  &lt;hardware&gt;
+    &lt;plugin&gt;gz_ros2_control/GazeboSimSystem&lt;/plugin&gt;
+  &lt;/hardware&gt;
+  &lt;joint name="left_wheel_joint"&gt;
+    &lt;command_interface name="velocity"/&gt;
+    &lt;state_interface name="position"/&gt;
+    &lt;state_interface name="velocity"/&gt;
+  &lt;/joint&gt;
+  &lt;joint name="right_wheel_joint"&gt;
+    &lt;command_interface name="velocity"/&gt;
+    &lt;state_interface name="position"/&gt;
+    &lt;state_interface name="velocity"/&gt;
+  &lt;/joint&gt;
+&lt;/ros2_control&gt;</code></pre>
+    <p>
+      This block says: we have a control system named <code>ArchoGazeboSystem</code>; its hardware is the
+      Gazebo simulation plugin; and the left and right Joints each accept a velocity command
+      (<code>command_interface</code>) and report their real position and velocity
+      (<code>state_interface</code>).
+    </p>
+    <div class="box eng">
+      <div class="box-title">🔧 Why Is This Block Inside the URDF, Not a Separate File?</div>
+      <p>
+        Because the URDF already knows the Joint names and the robot's mechanical structure. It makes sense
+        for the control Interface definitions to be attached to those same Joints, rather than living in a
+        completely separate file disconnected from the physical structure.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="config">
+    <h2><span class="num">8.5</span>Full diff_drive_controller Configuration</h2>
+    <p>The Controllers themselves are defined and configured in a separate YAML file:</p>
+    <pre><code># archo_bringup/config/controllers.yaml
+controller_manager:
+  ros__parameters:
+    update_rate: 50
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    diff_drive_controller:
+      type: diff_drive_controller/DiffDriveController
+
+diff_drive_controller:
+  ros__parameters:
+    left_wheel_names: [left_wheel_joint]
+    right_wheel_names: [right_wheel_joint]
+    wheel_separation: 0.40
+    wheel_radius: 0.09
+    base_frame_id: base_link
+    odom_frame_id: odom
+    publish_rate: 50.0
+    enable_odom_tf: true
+    use_stamped_vel: true
+    linear.x.has_velocity_limits: true
+    linear.x.max_velocity: 0.7
+    linear.x.min_velocity: -0.3
+    angular.z.has_velocity_limits: true
+    angular.z.max_velocity: 1.5</code></pre>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why wheel_separation and wheel_radius Are So Sensitive</div>
+      <p>
+        These two numbers must match ARCHO's real dimensions exactly (the same ones we wrote into the Xacro
+        in Chapter 4). If <code>wheel_radius</code> is wrong, the robot's actual speed will differ from its
+        reported speed and Odometry will be incorrect; if <code>wheel_separation</code> is wrong, the
+        rotation angle will be miscalculated and the robot will turn less or more than it should — an error
+        that gradually produces navigation drift.
+      </p>
+    </div>
+
+    <p>
+      <code>diff_drive_controller</code> estimates the robot's linear and angular motion from the two
+      wheels' encoder data and publishes it on the <code>/odom</code> Topic and the
+      <code>odom → base_link</code> Transform — exactly the same loop we saw in Chapter 5 and will examine
+      more deeply in Chapter 9.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="sim-vs-real">
+    <h2><span class="num">8.6</span>Simulation and the Real Robot: One Architecture, Two Hardware Layers</h2>
+    <p>
+      One of the biggest advantages of ros2_control is that the software architecture stays nearly
+      identical between simulation and the real robot — only one bottom layer changes:
+    </p>
+    <div class="mermaid">
+flowchart LR
+    subgraph SIM["Simulation"]
+    C1["Controller"] --> H1["Simulated Hardware Interface"] --> G1["Gazebo Joint"]
+    end
+    subgraph REAL["Real Robot"]
+    C2["Controller (same code)"] --> H2["Real Hardware Interface"] --> G2["Motor Driver / CAN"]
+    end
+    style C1 fill:#eef0ff,stroke:#3d4bf5
+    style C2 fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <p>
+      This means the <code>diff_drive_controller</code> we tested today on the simulated ARCHO — the exact
+      same Controller, with no code changes — also works on the real ARCHO; only the
+      <code>Hardware Interface</code> changes from <code>gz_ros2_control/GazeboSimSystem</code> to an actual
+      driver (which we'll build in Chapter 18). This is precisely the power of the layered ROS 2 architecture
+      we discussed back in Chapter 1.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="mistakes">
+    <h2><span class="num">8.7</span>Common ros2_control Mistakes</h2>
+    <table>
+      <tr><th>Mistake</th><th>Consequence</th></tr>
+      <tr><td>Two Controllers claiming the same Interface</td><td>Conflict, causing one activation to be rejected</td></tr>
+      <tr><td>Wrong encoder sign</td><td>The wheel moves forward but the encoder reports a negative value → incorrect Odometry</td></tr>
+      <tr><td>Wrong units (RPM instead of rad/s)</td><td>ROS expects Position in radians and Velocity in rad/s; a mismatch causes unexpected behavior</td></tr>
+      <tr><td>Wrong wheel radius</td><td>Speed and Odometry errors</td></tr>
+      <tr><td>Inappropriate update rate</td><td>Unstable control or sluggish response</td></tr>
+      <tr><td>No command timeout</td><td>If communication drops, the motor keeps executing the last command forever — dangerous in the real world</td></tr>
+    </table>
+    <div class="exercise">
+      <div class="level">Harder Exercise</div>
+      <p>
+        Suppose <code>wheel_radius</code> in the YAML was mistakenly entered as 0.07, while ARCHO's actual
+        wheel radius is 0.09 meters. If the robot really moves 1 meter, will the Odometry report a value
+        greater than or less than 1 meter? Write out your reasoning.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">8.8</span>Chapter 8 Summary</h2>
+    <p>
+      Now we know exactly what happens between a simple <code>cmd_vel</code> command and the actual rotation
+      of ARCHO's motors: the Controller Manager, two main Controllers (joint_state_broadcaster and
+      diff_drive_controller), and a Hardware Interface that can be either virtual or real — all without the
+      higher layers needing to know anything about it.
+    </p>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the Main Project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a complete, properly tuned <code>controllers.yaml</code>. The <code>cmd_vel</code> command is no longer just a raw number — it's actually converted into the rotation of two wheels and produces Odometry.</p>
+    </div>
+    <h3>What the Next Chapter Adds</h3>
+    <p>In Chapter 9, we'll combine this same <code>/odom</code> produced by <code>diff_drive_controller</code> with IMU data — Sensor Fusion using <code>robot_localization</code> — to make ARCHO's position estimate more accurate and stable.</p>
+    <h3>Chapter 8 Glossary</h3>
+    <dl class="glossary">
+      <dt>ros2_control</dt><dd>The standard ROS 2 framework for translating software commands into real or virtual hardware motion.</dd>
+      <dt>Controller Manager</dt><dd>The Node that loads, activates, deactivates, and manages Controllers.</dd>
+      <dt>Controller</dt><dd>A software unit that controls a specific motion behavior (such as differential drive or joint trajectories).</dd>
+      <dt>Hardware Interface</dt><dd>The layer that connects a Controller to the real or simulated hardware.</dd>
+      <dt>command_interface / state_interface</dt><dd>Respectively: what command we send to a Joint, and what state we read from it.</dd>
+      <dt>diff_drive_controller</dt><dd>The standard Controller for differential-drive robots; converts cmd_vel into per-wheel speeds and produces Odometry.</dd>
+    </dl>
+    <h3>Chapter 8 Common Mistakes — Summary</h3>
+    <ul>
+      <li>Mismatch between wheel_radius/wheel_separation in the YAML and the real URDF dimensions.</li>
+      <li>Activating two Controllers on a shared Interface.</li>
+      <li>Wrong units (degrees/RPM instead of radians/rad-per-second).</li>
+      <li>No timeout for velocity commands when deploying on real hardware.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 8 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Odometry and Sensor Fusion →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

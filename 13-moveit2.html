@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13 — MoveIt 2: When ARCHO Raises Its Arm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.9em; font-weight:800; margin:72px 0 22px; display:flex; align-items:center; gap:14px; letter-spacing:-.3px;}
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;} a{color:var(--accent);}
+  .box{border-radius:16px; padding:20px 24px; margin:22px 0; border:1px solid var(--border); background:var(--panel); position:relative; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;} .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;} .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;} .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;} .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;} .box.def .box-title{color:var(--gold);}
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px; padding:2px 7px; font-size:.87em; color:var(--accent-ink); display:inline-block;}
+  pre{background:#181a2e; border-radius:16px; padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;} tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;} li{margin-bottom:7px;}
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .checkpoint{border-radius:16px; padding:22px 24px; margin:26px 0; background:#eafaf3; border:1px solid #c9eeda;}
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;} .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+  .exercise{border-radius:14px; padding:18px 22px; margin:16px 0; background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);}
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;} .glossary dd{margin:4px 0 0; color:var(--muted);}
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;} .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .footer-nav{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:64px; padding-top:26px; border-top:1px solid var(--border); color:var(--muted); font-size:.9em;}
+  .badge-project{display:inline-block; background:#fdf3e4; border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;}
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+  @media print{ body{background:#fff; color:#000;} }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Illustrated Educational Book</div>
+    <h1>Chapter 13: MoveIt 2 — When ARCHO Raises Its Arm</h1>
+    <div class="subtitle">From following a single point to planning the motion of a multi-axis arm</div>
+    <div class="meta-row">
+      <div class="chip">Prerequisite: Chapter 4 (URDF/Xacro), Chapter 5 (TF2)</div>
+      <div class="chip">Ongoing project: the ARCHO robot with a pick-up arm</div>
+      <div class="chip">Tools: MoveIt 2 and OMPL</div>
+      <div class="chip">Reading time: 140–160 minutes</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this chapter</strong>
+    <a href="#intro"><span>13.1</span>MoveIt: the brain of a robotic arm</a>
+    <a href="#fk"><span>13.2</span>Forward Kinematics: if I know the joint angles</a>
+    <a href="#ik"><span>13.3</span>Inverse Kinematics: if I know the target</a>
+    <a href="#singularity"><span>13.4</span>Workspace, Singularity, and multiple solutions</a>
+    <a href="#scene"><span>13.5</span>Planning Scene: ARCHO's digital memory of the world</a>
+    <a href="#collision"><span>13.6</span>Collision Detection: the guard before every move</a>
+    <a href="#cspace"><span>13.7</span>Configuration Space: where MoveIt actually searches</a>
+    <a href="#ompl"><span>13.8</span>OMPL: RRT, RRTConnect, and PRM</a>
+    <a href="#trajectory"><span>13.9</span>From Path to executable Trajectory</a>
+    <a href="#summary"><span>13.10</span>Summary, glossary, and exercises</a>
+  </div>
+
+  <section id="intro">
+    <h2><span class="num">13.1</span>MoveIt: the brain of a robotic arm</h2>
+    <p>
+      Suppose you're working on a version of ARCHO that, besides wheels, also has a pick-up arm — for
+      grabbing boxes off a shelf. So far, with Nav2, we've seen how ARCHO moves through space. But when it
+      comes to moving the arm, the problem is entirely different: if Nav2 is the brain behind the mobile
+      robot's motion, <strong>MoveIt 2</strong> is the brain of the robotic arm.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Why you can't just say "go there"</div>
+      <p>
+        If you only say "the tip of the arm must be here" with no further checking, the arm might collide
+        with the table, the shelf, or even itself on its way to that point. MoveIt eliminates exactly this
+        risk — before any actual movement, it simulates and checks the entire path in its mind (in memory).
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="fk">
+    <h2><span class="num">13.2</span>Forward Kinematics: if I know the joint angles</h2>
+    <p>Suppose you have this arm:</p>
+    <pre><code>Base → Joint1 → Joint2 → Joint3 → Gripper</code></pre>
+    <p>Now a simple question: if I know the angle of all three joints, exactly where in space is the tip of the arm (the Gripper)?</p>
+    <div class="mermaid">
+flowchart LR
+    A["Joint Angles<br/>Joint1=20°, Joint2=35°, Joint3=-15°"] --> B["Forward Kinematics"] --> C["End Effector Position<br/>X, Y, Z"]
+    style B fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <div class="box idea">
+      <div class="box-title">🧠 Analogy: your own hand</div>
+      <p>
+        If I know the angle of your shoulder, elbow, and wrist, I can calculate the exact location of your
+        fingertip — that's exactly FK. This calculation is simple because we just "move forward": motor
+        angle → link angle → link position → tip of the arm. There is always exactly one answer.
+      </p>
+    </div>
+    <p>
+      FK is exactly what TF2 (Chapter 5) actually uses: when TF says "the joints have these angles," it's
+      FK that calculates the real position of <code>gripper_link</code> or <code>camera_link</code> in
+      space. RViz, Gazebo, and Collision Detection all constantly rely on FK.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="ik">
+    <h2><span class="num">13.3</span>Inverse Kinematics: if I know the target</h2>
+    <p>Now flip the question around: if I know where the tip of the arm needs to be (say, X=0.50, Y=0.20, Z=0.80), how many degrees must each joint turn?</p>
+    <div class="mermaid">
+flowchart LR
+    A["Target Pose<br/>X, Y, Z"] --> B["Inverse Kinematics"] --> C["Joint Angles"]
+    style B fill:#f4effe,stroke:#8b5cf6
+    </div>
+    <div class="box eng">
+      <div class="box-title">🔧 Why IK is harder than FK</div>
+      <p>
+        When you say "pick up the cup on the table," your brain itself calculates the shoulder, elbow, and
+        wrist angles — that's IK. But unlike FK, IK may have several solutions (say, elbow-up or
+        elbow-down, both reaching the target), no solution at all (the target is out of reach), or even
+        infinitely many solutions.
+      </p>
+    </div>
+    <p>
+      Why does IK matter more than FK? Because a human (or a production-line operator) always specifies a
+      <strong>goal</strong> — "tighten this screw," not "rotate Joint1 by 13 degrees." MoveIt performs this
+      translation from goal to joint angles for you.
+    </p>
+    <table>
+      <tr><th></th><th>Forward Kinematics</th><th>Inverse Kinematics</th></tr>
+      <tr><td>Input</td><td>Joint angles</td><td>Target position (Pose)</td></tr>
+      <tr><td>Output</td><td>Position of the arm tip</td><td>Joint angles</td></tr>
+      <tr><td>Number of solutions</td><td>Always exactly one</td><td>Zero, one, several, or infinite</td></tr>
+      <tr><td>Computational difficulty</td><td>Simple and direct</td><td>Usually requires a numerical solver</td></tr>
+      <tr><td>Common use</td><td>RViz, TF, Robot State, Gazebo</td><td>MoveIt, Pick & Place, Manipulation</td></tr>
+    </table>
+    <p>In real 6- or 7-axis arms, there is usually no simple closed-form formula for IK, and numerical solvers such as KDL, TRAC-IK, or IKFast are used, any of which MoveIt can employ as a plugin.</p>
+    <div class="box mistake">
+      <div class="box-title">⚠️ The biggest beginner mistake</div>
+      <p>
+        Don't think FK means "moving the arm" or IK means "moving the motor." Neither does that — they only
+        <strong>calculate</strong>. Actually executing the motion is the job of ros2_control and the
+        Controllers (Chapter 8).
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="singularity">
+    <h2><span class="num">13.4</span>Workspace, Singularity, and multiple solutions</h2>
+    <div class="box def">
+      <div class="box-title">📖 What is Workspace</div>
+      <p>Workspace means all the points the arm can actually reach. If the target is outside this range, IK responds: <code>Unreachable</code> — meaning reaching it is simply not possible, no matter how clear the path is.</p>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 What is Singularity</div>
+      <p>
+        When the arm becomes fully extended and straight, movement in certain directions suddenly becomes
+        difficult or even impossible — this is called a <strong>Singularity</strong>. MoveIt tries to steer
+        paths around configurations that approach this state.
+      </p>
+    </div>
+    <table>
+      <tr><th>IK case</th><th>Cause</th></tr>
+      <tr><td>Multiple solutions (e.g. elbow-up/down)</td><td>The arm's geometry allows several different configurations to reach one target</td></tr>
+      <tr><td>No solution (No IK Solution)</td><td>The target is too far, a Joint Limit prevents it, or there's an obstacle in the way</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="scene">
+    <h2><span class="num">13.5</span>Planning Scene: ARCHO's digital memory of the world</h2>
+    <p>
+      If MoveIt only had IK, it might choose the best mathematical answer — even if its path passes right
+      through a box on the table. So the question is: how does MoveIt even know that box exists?
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 Definition of Planning Scene</div>
+      <p>
+        The Planning Scene is a complete digital model of the world ARCHO moves through: the robot itself,
+        the table, the floor, the wall, boxes, tools, humans, fixed equipment, shelves, and the conveyor
+        belt. MoveIt always checks this world in memory before every move.
+      </p>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 The Planning Scene isn't static</div>
+      <p>
+        Suppose a worker places a new box on the table next to ARCHO. The Planning Scene updates
+        immediately, and from that moment on, MoveIt's new paths automatically route around that box —
+        without anyone writing a single new line of code.
+      </p>
+    </div>
+    <h3>Attached Object: when the arm makes itself bigger</h3>
+    <p>
+      When ARCHO picks up a box, from that moment the box is effectively treated as part of the robot
+      itself — this is called an <strong>Attached Object</strong>. If MoveIt forgets this, it might think
+      the arm is still narrow, while with the box in hand its actual width has grown from, say, 40
+      centimeters to 80 centimeters — and this is exactly what causes the box to hit a wall, even if the
+      arm itself passed by it completely unscathed.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="collision">
+    <h2><span class="num">13.6</span>Collision Detection: the guard before every move</h2>
+    <p>
+      Before executing any path, MoveIt asks: "Does the arm collide with anything at <strong>any</strong>
+      moment along this path?" And this check isn't just at the start and end of the path — it's performed
+      at hundreds or thousands of intermediate points along the way. If the start and end are clear but a
+      collision occurs mid-path, that path is rejected.
+    </p>
+    <table>
+      <tr><th>Collision type</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td>Self Collision</td><td>The robot collides with itself</td><td>The Gripper hits the Upper Arm due to excessive elbow bending</td></tr>
+      <tr><td>World Collision</td><td>Collision with the environment</td><td>Table, wall, human, box, shelf</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Why MoveIt doesn't check every link pair against each other</div>
+      <p>
+        Two adjacent joints like Joint1 and Joint2 are naturally always close to each other, and constantly
+        checking their collision is pointless and slow. MoveIt builds a <strong>Self-Collision Matrix</strong>
+        that specifies which pairs don't need checking at all — which makes the computation dramatically
+        faster.
+      </p>
+    </div>
+    <p>
+      Remember in Chapter 4 we said URDF has two sections, <code>visual</code> and <code>collision</code>?
+      MoveIt only uses the <code>collision</code> section — a simple box instead of the precise screws,
+      edges, and logo of the visual model, because that's enough for collision checking and much faster.
+    </p>
+    <h3>Allowed Collision Matrix</h3>
+    <p>
+      Sometimes a collision is completely natural and necessary — for example, the Gripper must touch an
+      object in order to grasp it. MoveIt marks these exceptions with a matrix:
+      <code>Gripper ↔ Object → Allowed</code>, but <code>Gripper ↔ Table → Not Allowed</code>.
+    </p>
+    <h3>Constraints: extra restrictions on the path</h3>
+    <table>
+      <tr><th>Constraint type</th><th>Example</th></tr>
+      <tr><td>Orientation Constraint</td><td>A cup of water must always stay upright</td></tr>
+      <tr><td>Position Constraint</td><td>The arm may only move within a specified region</td></tr>
+      <tr><td>Joint Constraint</td><td>Joint3 must never exceed 90 degrees</td></tr>
+      <tr><td>Workspace Constraint</td><td>The arm is only allowed to move within a specified volume</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="cspace">
+    <h2><span class="num">13.7</span>Configuration Space: where MoveIt actually searches</h2>
+    <p>
+      Suppose ARCHO's arm has 6 joints, and each joint has only 100 possible states. If MoveIt tried to test
+      every combination, it would have to check 100⁶ — one trillion states — completely impossible.
+    </p>
+    <div class="box idea">
+      <div class="box-title">🧠 Perhaps the most important concept in all of Motion Planning</div>
+      <p>
+        Many people think MoveIt finds a path inside the three-dimensional space of the room. That's wrong.
+        MoveIt actually searches inside the <strong>Configuration Space (C-Space)</strong> — the space of
+        joint angles. If you have 6 joints, every configuration of the arm is a single point in a
+        6-dimensional space, not a point in the room.
+      </p>
+    </div>
+    <p>
+      Inside C-Space, some points are <strong>Free Space</strong> (allowed and collision-free) and some are
+      <strong>Collision Space</strong> (not allowed because they collide with the table, wall, or the arm
+      itself). The goal of the Motion Planner is to find a path from the Start point to the Goal point that
+      stays entirely within Free Space.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="ompl">
+    <h2><span class="num">13.8</span>OMPL: RRT, RRTConnect, and PRM</h2>
+    <div class="box def">
+      <div class="box-title">📖 What is OMPL</div>
+      <p>
+        Open Motion Planning Library — MoveIt doesn't write its own path-planning algorithms; instead it
+        uses this open-source library. OMPL's input: Planning Scene + Robot Model + Goal. Output: a
+        Trajectory.
+      </p>
+    </div>
+    <h3>RRT (Rapidly-exploring Random Tree)</h3>
+    <p>
+      Instead of examining the whole space, RRT grows a tree from the start point, like the roots of a
+      plant. Each new branch is a new random configuration of the arm. If a branch hits an obstacle, it's
+      discarded and the tree grows in another direction. When a branch reaches the Goal, that branch becomes
+      the final path.
+    </p>
+    <h3>RRTConnect</h3>
+    <p>
+      An improved version: instead of one tree, two trees grow simultaneously — one from Start and one from
+      Goal. When these two trees meet, a path has been found. This is usually the fastest planner available
+      in MoveIt.
+    </p>
+    <h3>PRM (Probabilistic Roadmap)</h3>
+    <p>
+      First, thousands of random points are generated in C-Space and connected to each other — like
+      building a road map. Then a suitable path is simply chosen along that road network.
+    </p>
+    <table>
+      <tr><th></th><th>RRT / RRTConnect</th><th>PRM</th></tr>
+      <tr><td>Method</td><td>Starts fresh from scratch each time</td><td>First builds a fixed "road network," then uses it repeatedly</td></tr>
+      <tr><td>Best suited for</td><td>Constantly changing environments</td><td>Static, repetitive environments</td></tr>
+    </table>
+    <div class="figure">
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" style="direction:ltr" direction="ltr">
+        <rect width="760" height="300" fill="#fffefb"/>
+        <rect x="12" y="12" width="356" height="276" rx="14" fill="#eef0ff" stroke="#d6dafc"/>
+        <text x="190" y="40" text-anchor="middle" fill="#2732b8" font-family="Inter, sans-serif" font-size="14" font-weight="700">RRTConnect: two trees</text>
+        <circle cx="60" cy="150" r="8" fill="#3d4bf5"/>
+        <text x="60" y="175" text-anchor="middle" font-size="10" fill="#211f1a" font-family="JetBrains Mono, monospace">Start</text>
+        <circle cx="320" cy="150" r="8" fill="#c8862c"/>
+        <text x="320" y="175" text-anchor="middle" font-size="10" fill="#211f1a" font-family="JetBrains Mono, monospace">Goal</text>
+        <g stroke="#3d4bf5" stroke-width="1.5" fill="none" opacity="0.7">
+          <path d="M60 150 L100 110 L140 130"/>
+          <path d="M60 150 L90 190 L130 175"/>
+          <path d="M60 150 L110 160 L150 145"/>
+        </g>
+        <g stroke="#c8862c" stroke-width="1.5" fill="none" opacity="0.7">
+          <path d="M320 150 L280 115 L245 135"/>
+          <path d="M320 150 L285 185 L240 170"/>
+          <path d="M320 150 L265 155 L200 148"/>
+        </g>
+        <circle cx="150" cy="145" r="4" fill="#0e9e6e"/>
+        <circle cx="200" cy="148" r="4" fill="#0e9e6e"/>
+        <line x1="150" y1="145" x2="200" y2="148" stroke="#0e9e6e" stroke-width="2.5"/>
+        <rect x="392" y="12" width="356" height="276" rx="14" fill="#f4effe" stroke="#e2d6fb"/>
+        <text x="570" y="40" text-anchor="middle" fill="#8b5cf6" font-family="Inter, sans-serif" font-size="14" font-weight="700">PRM: random road map</text>
+        <g fill="#8b5cf6">
+          <circle cx="440" cy="90" r="4"/><circle cx="490" cy="70" r="4"/><circle cx="540" cy="100" r="4"/>
+          <circle cx="460" cy="140" r="4"/><circle cx="520" cy="150" r="4"/><circle cx="580" cy="120" r="4"/>
+          <circle cx="450" cy="200" r="4"/><circle cx="510" cy="210" r="4"/><circle cx="570" cy="190" r="4"/>
+          <circle cx="620" cy="150" r="4"/><circle cx="650" cy="90" r="4"/>
+        </g>
+        <g stroke="#c3b3f0" stroke-width="1">
+          <line x1="440" y1="90" x2="490" y2="70"/><line x1="490" y1="70" x2="540" y2="100"/>
+          <line x1="440" y1="90" x2="460" y2="140"/><line x1="460" y1="140" x2="520" y2="150"/>
+          <line x1="540" y1="100" x2="520" y2="150"/><line x1="520" y1="150" x2="580" y2="120"/>
+          <line x1="460" y1="140" x2="450" y2="200"/><line x1="450" y1="200" x2="510" y2="210"/>
+          <line x1="510" y1="210" x2="570" y2="190"/><line x1="570" y1="190" x2="580" y2="120"/>
+          <line x1="580" y1="120" x2="620" y2="150"/><line x1="620" y1="150" x2="650" y2="90"/>
+        </g>
+      </svg>
+      <figcaption>Left side: RRTConnect grows two trees from Start and Goal. Right side: PRM first builds a fixed network of random points.</figcaption>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="trajectory">
+    <h2><span class="num">13.9</span>From Path to executable Trajectory</h2>
+    <p>
+      The Planner only finds a <strong>Path</strong> — a sequence of joint angles with no information about
+      time at all. This raw path usually has sharp corners that aren't suitable for physical execution, so
+      MoveIt smooths it out with <strong>Path Smoothing</strong>.
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 The difference between Path and Trajectory</div>
+      <p>A Path is just the route. A Trajectory means route + time — for example, "second zero: Joint1=0°, second one: Joint1=20°, second two: Joint1=35°." This final Trajectory is what the Controller (Chapter 8) actually executes.</p>
+    </div>
+    <p>When building the final Trajectory, MoveIt also respects several constraints:</p>
+    <table>
+      <tr><th>Constraint</th><th>Meaning</th></tr>
+      <tr><td>Velocity Limit</td><td>No joint's speed exceeds its allowed limit</td></tr>
+      <tr><td>Acceleration Limit</td><td>No sudden acceleration</td></tr>
+      <tr><td>Jerk</td><td>Even a sudden change in acceleration is limited in professional industrial robots</td></tr>
+    </table>
+    <p>The central coordinator of all this is a Node known as <code>move_group</code>:</p>
+    <div class="mermaid">
+flowchart LR
+    A["RViz / User"] --> B["move_group"] --> C["OMPL Planner"] --> D["Trajectory"] --> E["ros2_control"] --> F["Robot"]
+    style B fill:#eef0ff,stroke:#3d4bf5
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ The Planner doesn't always find the "best" path</div>
+      <p>
+        RRT and RRTConnect find a <strong>good, safe</strong> path, not necessarily the mathematically
+        optimal path in the world — because finding the absolutely optimal path could take hours. MoveIt
+        has a limited <code>Planning Time</code> (say, 5 seconds); if no path is found by then, it returns
+        <code>Planning Failed</code>.
+      </p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="summary">
+    <h2><span class="num">13.10</span>Chapter 13 summary</h2>
+    <p>
+      Now you know what happens behind the scenes when ARCHO raises its arm to pick up a box: FK calculates
+      where the arm currently is, IK calculates what joint angles are needed to reach the target, the
+      Planning Scene keeps the surrounding world in memory, Collision Detection verifies the safety of the
+      path, and OMPL finds a safe route through the multi-dimensional Configuration Space, which is finally
+      turned into an executable Trajectory.
+    </p>
+    <div class="checkpoint">
+      <strong style="color:var(--text); display:block; margin-bottom:10px;">✅ Learning checkpoint</strong>
+      <ul>
+        <li>I can explain the difference between FK and IK using an example from my own hand.</li>
+        <li>I know why IK may have several solutions, no solution, or infinitely many solutions.</li>
+        <li>I can explain what the Planning Scene is and why it isn't static.</li>
+        <li>I know why MoveIt searches in the space of joint angles, not the physical space of the room.</li>
+        <li>I can explain the difference between RRTConnect and PRM and say which environment each suits better.</li>
+        <li>I know the difference between Path and Trajectory.</li>
+      </ul>
+    </div>
+    <div class="box real">
+      <div class="box-title">🌍 Connection to the main project</div>
+      <p><span class="badge-project">ARCHO Project</span> now has a complete MoveIt configuration that, using the Planning Scene, Collision Detection, and the RRTConnect algorithm, can guide its pick-up arm to grab a box from the shelf without colliding with the environment.</p>
+    </div>
+    <h3>What the next chapter adds</h3>
+    <p>In Chapter 14 we move away from a single ARCHO and enter the world of multi-robot systems: Namespaces, TF Prefixes, and coordinating multiple ARCHOs working simultaneously in a warehouse.</p>
+    <h3>Chapter 13 glossary</h3>
+    <dl class="glossary">
+      <dt>MoveIt 2</dt><dd>The primary ROS 2 framework for motion planning of robotic arms.</dd>
+      <dt>Forward Kinematics (FK)</dt><dd>Calculating the position of the arm tip from the joint angles.</dd>
+      <dt>Inverse Kinematics (IK)</dt><dd>Calculating the joint angles needed to reach a target position.</dd>
+      <dt>End Effector</dt><dd>The last part of the arm that performs the actual work; e.g. a Gripper or Welding Torch.</dd>
+      <dt>Singularity</dt><dd>A geometric configuration in which the arm's movement in certain directions suddenly becomes difficult or impossible.</dd>
+      <dt>Planning Scene</dt><dd>A digital, up-to-date model of everything around the robot that it might collide with.</dd>
+      <dt>Attached Object</dt><dd>An object the robot has grasped and, from that moment, is treated as part of the robot itself.</dd>
+      <dt>Configuration Space (C-Space)</dt><dd>The multi-dimensional space made up of all the robot's joint angles, which is where MoveIt searches.</dd>
+      <dt>OMPL</dt><dd>Open Motion Planning Library; the library that runs MoveIt's actual path-planning algorithms.</dd>
+      <dt>RRT / RRTConnect</dt><dd>Path-planning algorithms based on growing a random tree in Configuration Space.</dd>
+    </dl>
+    <h3>Chapter 13 common mistakes — recap</h3>
+    <ul>
+      <li>Forgetting the Attached Object after the Gripper picks up an object.</li>
+      <li>Assuming FK or IK themselves create motion, when they only compute.</li>
+      <li>Expecting OMPL to produce the best mathematical path instead of a safe, acceptable one.</li>
+      <li>Ignoring Self-Collision when designing the range of motion of the joints.</li>
+    </ul>
+  </section>
+
+  <div class="footer-nav">
+    <div>Chapter 13 of "ROS 2: Zero to Robot"</div>
+    <div>Next chapter: Multi-Robot Systems →</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'base',
+    themeVariables: {
+      background: '#f1efe8', primaryColor: '#eef0ff', primaryTextColor: '#211f1a',
+      primaryBorderColor: '#3d4bf5', lineColor: '#0e9e6e', secondaryColor: '#f1efe8',
+      tertiaryColor: '#fffefb', textColor: '#211f1a', fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

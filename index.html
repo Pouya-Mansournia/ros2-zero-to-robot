@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROS 2: Zero to Robot — Learning Path (Full Book Table of Contents)</title>
+<meta name="description" content="Learn ROS 2 from the ground up — a visual, project-driven textbook, from your first Node to the complete architecture of a real autonomous mobile robot. ROS 2: Zero to Robot — From First Node to Real Autonomous Mobile Robot.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffefb; --panel2:#f1efe8; --border:#e6e1d6;
+    --text:#211f1a; --muted:#7a7568; --accent:#3d4bf5; --accent-ink:#2732b8;
+    --accent2:#0e9e6e; --gold:#c8862c; --danger:#d64a3c; --purple:#8b5cf6; --radius:14px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, sans-serif; line-height:1.85; font-size:17.5px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px; margin:0 auto; padding:48px 24px 120px;}
+  .cover{border-radius:28px; background:#12142b; padding:64px 44px; margin-bottom:56px; position:relative; overflow:hidden; isolation:isolate;}
+  .cover::before{content:""; position:absolute; inset:-40%; background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px); z-index:0;}
+  .cover::after{content:""; position:absolute; inset:0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px; z-index:0;}
+  .cover > *{position:relative; z-index:1;}
+  .kicker{display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px; margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); padding:6px 14px; border-radius:999px;}
+  .cover h1{font-size:2.8em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0; padding:7px 15px; border-radius:999px; font-size:.83em;}
+  h2{font-size:1.5em; font-weight:800; margin:52px 0 20px; display:flex; align-items:center; gap:12px; letter-spacing:-.2px; color:var(--accent-ink);}
+  p{margin:0 0 16px; color:#3c382f;} strong{color:var(--text); font-weight:700;}
+  .part-badge{display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:10px; background:var(--accent); color:#fff; font-size:.65em; font-weight:800; flex-shrink:0;}
+  .chapter-list{display:flex; flex-direction:column; gap:12px;}
+  .chapter-card{display:flex; align-items:center; gap:18px; background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px 22px; text-decoration:none; color:var(--text); transition:transform .15s, box-shadow .15s, border-color .15s; box-shadow:0 1px 2px rgba(33,31,26,0.03);}
+  .chapter-card:hover{transform:translateY(-2px); box-shadow:0 16px 32px -20px rgba(33,31,26,0.25); border-color:#c7cbfa;}
+  .chapter-num{flex-shrink:0; width:46px; height:46px; border-radius:12px; background:#eef0ff; color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.05em; font-family:'JetBrains Mono', monospace;}
+  .chapter-info{flex:1; min-width:0;}
+  .chapter-title{font-weight:700; font-size:1.03em; margin-bottom:3px;}
+  .chapter-desc{color:var(--muted); font-size:.87em;}
+  .chapter-arrow{flex-shrink:0; color:var(--accent); font-size:1.3em; opacity:.6;}
+  .chapter-card:hover .chapter-arrow{opacity:1;}
+  .part-header{display:flex; align-items:center; gap:10px; margin:44px 0 16px;}
+  .part-header .line{flex:1; height:1px; background:var(--border);}
+  .part-title{font-size:.82em; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:.7px; white-space:nowrap;}
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+  .box{border-radius:16px; padding:22px 26px; margin:22px 0; border:1px solid var(--border); background:var(--panel);}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;}
+  .box-title{font-weight:800; margin-bottom:9px; color:var(--accent-ink); font-size:.96em;}
+  .footer-note{text-align:center; color:var(--muted); font-size:.88em; margin-top:60px;}
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/Dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">Visual Textbook &nbsp;·&nbsp; 20 Complete Chapters</div>
+    <h1>ROS 2: Zero to Robot</h1>
+    <div class="subtitle">From First Node to Real Autonomous Mobile Robot — from a simple Node to the complete industrial architecture of ARCHO in the warehouse</div>
+    <div class="meta-row">
+      <div class="chip">20 Chapters</div>
+      <div class="chip">Continuous Project: ARCHO Robot</div>
+      <div class="chip">ROS 2 Jazzy</div>
+      <div class="chip">Language: English</div>
+    </div>
+  </div>
+
+  <p>
+    This table of contents lays out all 20 chapters of the book in learning order. Each chapter builds on the
+    concepts of the previous ones, so it's best to read them in this order. Click any card to open that chapter.
+  </p>
+
+  <figure class="figure">
+    <img src="images/ros2-robot-architecture-infographic.png" alt="Overview of ROS 2 architecture — from CAD design to deployment on a real robot" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+    <figcaption>Overview of ROS 2 architecture — from CAD design to deployment on a real robot</figcaption>
+  </figure>
+
+  <div class="part-header">
+    <span class="part-title">Part One — ROS 2 Foundations</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="01-ros2-architecture.html">
+      <div class="chapter-num">1</div>
+      <div class="chapter-info">
+        <div class="chapter-title">ROS 2 Architecture</div>
+        <div class="chapter-desc">Node, Topic, Service, Action, Parameter, and Launch File</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="02-development-environment.html">
+      <div class="chapter-num">2</div>
+      <div class="chapter-info">
+        <div class="chapter-title">The ROS 2 Development Environment</div>
+        <div class="chapter-desc">Workspace, Package, and your first real Node</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="03-practical-communication-archo.html">
+      <div class="chapter-num">3</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Practical Communication with ARCHO</div>
+        <div class="chapter-desc">Real Pub/Sub, Service, Action, and a complete Launch File</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Part Two — Building ARCHO's Body</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="04-archo-body-urdf-xacro.html">
+      <div class="chapter-num">4</div>
+      <div class="chapter-info">
+        <div class="chapter-title">ARCHO's Body — URDF and Xacro</div>
+        <div class="chapter-desc">Links, Joints, wheels, sensors, and the complete body structure</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="05-tf2-coordinate-frames.html">
+      <div class="chapter-num">5</div>
+      <div class="chapter-info">
+        <div class="chapter-title">TF2 and Coordinate Frames</div>
+        <div class="chapter-desc">The TF tree, static and dynamic transforms, and the map→odom→base_link chain</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="06-rviz.html">
+      <div class="chapter-num">6</div>
+      <div class="chapter-info">
+        <div class="chapter-title">RViz — The Visual Dashboard</div>
+        <div class="chapter-desc">Displays, Fixed Frame, and watching ARCHO live</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Part Three — Simulation and Control</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="07-gazebo.html">
+      <div class="chapter-num">7</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Gazebo — ARCHO's Virtual Lab</div>
+        <div class="chapter-desc">Physics, RTF, gz_ros2_control, and simulated sensors</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="08-ros2-control.html">
+      <div class="chapter-num">8</div>
+      <div class="chapter-info">
+        <div class="chapter-title">ros2_control — From Command to Motion</div>
+        <div class="chapter-desc">Controller Manager, controller types, and controllers.yaml</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="09-odometry-sensor-fusion.html">
+      <div class="chapter-num">9</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Odometry and Sensor Fusion</div>
+        <div class="chapter-desc">Wheel Odometry, IMU, robot_localization, and the EKF</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Part Four — Perceiving the Environment and Autonomy</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="10-slam.html">
+      <div class="chapter-num">10</div>
+      <div class="chapter-info">
+        <div class="chapter-title">SLAM — ARCHO Maps the Warehouse</div>
+        <div class="chapter-desc">SLAM Toolbox, Mapping/Localization Mode, and saving the map</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="11-navigation2.html">
+      <div class="chapter-num">11</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Navigation2 — ARCHO's Motion Brain</div>
+        <div class="chapter-desc">Map Server, AMCL, Costmap, Global Planner, and Local Controller</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="12-behaviortree-lifecycle.html">
+      <div class="chapter-num">12</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Behavior Trees and Lifecycle Nodes</div>
+        <div class="chapter-desc">Nav2's intelligent decision-making and safe Node startup</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="13-moveit2.html">
+      <div class="chapter-num">13</div>
+      <div class="chapter-info">
+        <div class="chapter-title">MoveIt 2 — When ARCHO Raises Its Arm</div>
+        <div class="chapter-desc">FK/IK, Planning Scene, Collision Detection, and OMPL</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Part Five — Scalability and Software Delivery</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="14-multi-robot.html">
+      <div class="chapter-num">14</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Multi-Robot — A Fleet of ARCHOs</div>
+        <div class="chapter-desc">Namespace, TF Prefix, and Fleet Manager</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="15-docker-cicd.html">
+      <div class="chapter-num">15</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Docker and CI/CD for ROS 2</div>
+        <div class="chapter-desc">Containerization and an automated test pipeline</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Part Six — Hardware and Industrial Deployment</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="16-jetson-rpi-esp32.html">
+      <div class="chapter-num">16</div>
+      <div class="chapter-info">
+        <div class="chapter-title">ARCHO's Compute Hardware</div>
+        <div class="chapter-desc">Jetson, Raspberry Pi, ESP32, and micro-ROS</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="17-can-ethercat.html">
+      <div class="chapter-num">17</div>
+      <div class="chapter-info">
+        <div class="chapter-title">CAN Bus and EtherCAT</div>
+        <div class="chapter-desc">Industrial networks for connecting drivers and servos</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="18-sim-to-real.html">
+      <div class="chapter-num">18</div>
+      <div class="chapter-info">
+        <div class="chapter-title">From Simulation to the Real ARCHO</div>
+        <div class="chapter-desc">Bringup, calibration, safety testing, and Logging</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="19-qos-dds-diagnostics-safety.html">
+      <div class="chapter-num">19</div>
+      <div class="chapter-info">
+        <div class="chapter-title">QoS, DDS, Diagnostics, and Industrial Safety</div>
+        <div class="chapter-desc">From "it works" to "reliable in production"</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+    <a class="chapter-card" href="20-final-architecture-archo.html">
+      <div class="chapter-num">20</div>
+      <div class="chapter-info">
+        <div class="chapter-title">ARCHO's Final Industrial Architecture</div>
+        <div class="chapter-desc">The closing chapter — everything comes together</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-title">Appendices</span>
+    <span class="line"></span>
+  </div>
+  <div class="chapter-list">
+    <a class="chapter-card" href="appendix.html">
+      <div class="chapter-num">A</div>
+      <div class="chapter-info">
+        <div class="chapter-title">Appendix A: Connecting SolidWorks to URDF</div>
+        <div class="chapter-desc">From ARCHO's mechanical model in SolidWorks to a live view in RViz</div>
+      </div>
+      <div class="chapter-arrow">←</div>
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="box idea">
+    <div class="box-title">🧠 How to Use This Book</div>
+    <p style="margin:0;">
+      The chapters are designed to be read in order, each building on the concepts of the one before it — so
+      it's best to read them in sequence rather than jumping around. The ARCHO project runs continuously through
+      every chapter, so the further you go, the more complete the picture becomes.
+    </p>
+  </div>
+
+  <p class="footer-note">ROS 2 Learning Path &nbsp;·&nbsp; 20 Chapters &nbsp;·&nbsp; ARCHO Project</p>
+
+</div>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>

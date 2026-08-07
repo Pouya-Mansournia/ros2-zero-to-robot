@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appendix A — Connecting SolidWorks to URDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#fffefb;
+    --panel2:#f1efe8;
+    --border:#e6e1d6;
+    --text:#211f1a;
+    --muted:#7a7568;
+    --accent:#3d4bf5;
+    --accent-ink:#2732b8;
+    --accent2:#0e9e6e;
+    --gold:#c8862c;
+    --danger:#d64a3c;
+    --purple:#8b5cf6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.85;
+    font-size:17.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+
+  /* Cover */
+  .cover{
+    border-radius:28px;
+    background:#12142b;
+    padding:64px 44px;
+    margin-bottom:56px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .cover::before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px);
+    z-index:0;
+  }
+  .cover::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index:0;
+  }
+  .cover > *{position:relative; z-index:1;}
+  .kicker{
+    display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px;
+    margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
+    padding:6px 14px; border-radius:999px;
+  }
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0;
+    padding:7px 15px; border-radius:999px; font-size:.83em;
+  }
+
+  h2{
+    font-size:1.9em; font-weight:800; margin:72px 0 22px;
+    display:flex; align-items:center; gap:14px; letter-spacing:-.3px;
+  }
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;}
+  strong{color:var(--text); font-weight:700;}
+
+  a{color:var(--accent);}
+
+  /* Callout boxes */
+  .box{
+    border-radius:16px; padding:20px 24px; margin:22px 0;
+    border:1px solid var(--border); background:var(--panel);
+    position:relative;
+    box-shadow:0 1px 2px rgba(33,31,26,0.03);
+  }
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;}
+  .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;}
+  .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;}
+  .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;}
+  .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;}
+  .box.def .box-title{color:var(--gold);}
+
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{
+    background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px;
+    padding:2px 7px; font-size:.87em; color:var(--accent-ink);
+    display:inline-block;
+  }
+  pre{
+    background:#181a2e; border-radius:16px;
+    padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65;
+    box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);
+  }
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.92em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:right;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;}
+  li{margin-bottom:7px;}
+
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+
+  .checkpoint{
+    border-radius:16px; padding:22px 24px; margin:26px 0;
+    background:#eafaf3; border:1px solid #c9eeda;
+  }
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;}
+  .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+
+  .exercise{
+    border-radius:14px; padding:18px 22px; margin:16px 0;
+    background:var(--panel); border:1px solid var(--border); border-inline-start:4px solid var(--gold);
+  }
+  .exercise .level{font-size:.76em; color:var(--gold); font-weight:800; text-transform:uppercase; letter-spacing:.6px;}
+
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;}
+  .glossary dd{margin:4px 0 0; color:var(--muted);}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;}
+  .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+
+  .footer-nav{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:.9em;
+  }
+
+  .badge-project{
+    display:inline-block; background:#fdf3e4;
+    border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;
+  }
+
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+
+  @media print{
+    body{background:#fff; color:#000;}
+  }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .journey-item{background:#1f2242; border-color:#383d6b; color:#aab1ff;}
+  html[data-theme="dark"] .chapter-num{background:#1f2242;}
+  html[data-theme="dark"] .chapter-card{box-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  html[data-theme="dark"] .chapter-card:hover{border-color:#454a7a; box-shadow:0 16px 32px -20px rgba(0,0,0,0.55);}
+  html[data-theme="dark"] .status-badge[style*="eafaf3"], html[data-theme="dark"] .lifecycle-badge[style*="eafaf3"]{background:#16302a !important; color:#34d399 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdf3e4"], html[data-theme="dark"] .lifecycle-badge[style*="fdf3e4"]{background:#3a2f18 !important; color:#e3a548 !important;}
+  html[data-theme="dark"] .status-badge[style*="fdeeec"], html[data-theme="dark"] .lifecycle-badge[style*="fdeeec"]{background:#3a2220 !important; color:#f0685a !important;}
+  html[data-theme="dark"] .status-badge[style*="f1efe8"], html[data-theme="dark"] .lifecycle-badge[style*="f1efe8"]{background:#20232f !important; color:#9498b3 !important;}
+  body, .box, .chapter-card, .exercise, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/Dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Practical Appendix</div>
+    <h1>Appendix A: Connecting SolidWorks to URDF</h1>
+    <div class="subtitle">From the ARCHO mechanical model in SolidWorks to a live display in RViz</div>
+    <div class="meta-row">
+      <div class="chip">Audience: anyone who has designed a robot body in SolidWorks</div>
+      <div class="chip">Prerequisites: Chapter 4 (URDF and Xacro) and Chapter 6 (RViz)</div>
+      <div class="chip">Running project: the ARCHO robot</div>
+      <div class="chip">Reading time: 60 to 90 minutes</div>
+    </div>
+  </div>
+
+  <p>
+    Before anything else, build a mental picture. What you learn in this appendix follows exactly this path: a real
+    mobile robot, designed on paper and in SolidWorks, gets translated step by step into a language ROS 2 can understand.
+  </p>
+  <figure class="figure">
+    <img src="images/amr-product-render-control-panel-detail.jpg" alt="An industrial autonomous mobile robot (AMR) — the same kind of body we convert from SolidWorks to URDF in this appendix" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+    <figcaption>An industrial autonomous mobile robot (AMR) — exactly the kind of body we go on to convert from SolidWorks to URDF: a chassis, two drive wheels, and several casters for balance</figcaption>
+  </figure>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this appendix</strong>
+    <a href="#pipeline"><span>A.1</span>Overview of the pipeline — from assembly to RViz</a>
+    <a href="#urdf-basics"><span>A.2</span>What exactly is URDF?</a>
+    <a href="#mental-model"><span>A.3</span>The right way to think: from mechanism to Exporter tree</a>
+    <a href="#assembly-prep"><span>A.4</span>Preparing the SolidWorks assembly</a>
+    <a href="#coordinate-system"><span>A.5</span>The ROS coordinate system and Coordinate System</a>
+    <a href="#mass-material"><span>A.6</span>Material, mass, and inertia</a>
+    <a href="#installing-exporter"><span>A.7</span>Installing the SolidWorks URDF Exporter</a>
+    <a href="#defining-links"><span>A.8</span>Defining Links, Joints, and axes</a>
+    <a href="#visual-collision"><span>A.9</span>Collision versus Visual</a>
+    <a href="#exporting"><span>A.10</span>Exporting and transferring files to WSL</a>
+    <a href="#building-package"><span>A.11</span>Building the ROS 2 package</a>
+    <a href="#testing-rviz"><span>A.12</span>Testing in RViz and checking TF</a>
+    <a href="#troubleshooting"><span>A.13</span>Common errors and how to fix them</a>
+    <a href="#sample-urdf"><span>A.14</span>Full sample URDF</a>
+    <a href="#summary"><span>A.15</span>Summary, checklist, and exercise</a>
+  </div>
+
+  <section id="pipeline">
+    <h2><span class="num">A.1</span>Overview of the pipeline: from assembly to RViz</h2>
+    <p>
+      A common mistake is to assume SolidWorks connects directly and live to ROS 2. It doesn't work that way.
+      The real path is a multi-stage pipeline: you prepare a mechanical assembly in SolidWorks, an add-in (the
+      Exporter) converts it into URDF and Mesh files, and then you place those files inside a normal ROS 2
+      package — exactly what you learned in Chapter 4 about the structure of ARCHO's body URDF.
+    </p>
+    <div class="mermaid">
+flowchart LR
+    A["SolidWorks Assembly"] --> B["SolidWorks URDF Exporter"]
+    B --> C["URDF + STL Meshes"]
+    C --> D["ROS 2 Package"]
+    D --> E["RViz"]
+    E --> F["Gazebo"]
+    F --> G["ros2_control"]
+    style A fill:#2f7de8,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style C fill:#d98c19,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style E fill:#0f9d78,stroke:#ffffff,color:#0b1220,font-weight:bold
+    style G fill:#8b5cf6,stroke:#ffffff,color:#ffffff,font-weight:bold
+    </div>
+    <p>
+      The goal of this appendix is simply to get ARCHO's mechanical model into a URDF that ROS 2 can understand
+      and to see it displayed correctly in RViz. Once the model looks right in RViz, we move on to Gazebo and
+      ros2_control (Chapters 7 and 8) — not before.
+    </p>
+    <div class="box idea">
+      <div class="box-title">💡 Simple Idea</div>
+      <p>
+        SolidWorks is a mechanical translator, not a live driver. Its job is to translate the geometry, mass,
+        and relative motion of the parts into URDF, once. After that, ROS 2 has nothing more to do with SolidWorks.
+      </p>
+    </div>
+  </section>
+
+  <section id="urdf-basics">
+    <h2><span class="num">A.2</span>What exactly is URDF?</h2>
+    <p>
+      <strong>URDF</strong> stands for <strong>Unified Robot Description Format</strong>: a text-based XML file
+      that tells ROS what parts the robot is made of, which part is connected to which, where the joints are,
+      what the rotation or motion axis of each joint is, what the mass and center of mass of each part is, and
+      what the visual appearance and physical collision shape of the parts look like.
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 Two Core URDF Concepts</div>
+      <p><strong>Link</strong> = a rigid body (an independent physical part)</p>
+      <p><strong>Joint</strong> = the connection between two Links that defines their relative motion</p>
+    </div>
+    <p>For example, the Link tree of ARCHO — the same two-wheeled robot introduced in Chapter 1 — looks like this:</p>
+    <div class="mermaid">
+flowchart TD
+    A["base_link"] --> B["left_wheel_link"]
+    A --> C["right_wheel_link"]
+    A --> D["caster_link"]
+    A --> E["lidar_link"]
+    A --> F["camera_link"]
+    style A fill:#2f7de8,stroke:#ffffff,color:#0b1220,font-weight:bold
+    </div>
+    <p>And every connection is defined by an independent Joint:</p>
+    <pre><code>base_link
+   ├── left_wheel_joint  → left_wheel_link
+   ├── right_wheel_joint → right_wheel_link
+   ├── lidar_joint       → lidar_link
+   └── camera_joint      → camera_link</code></pre>
+  </section>
+
+  <section id="mental-model">
+    <h2><span class="num">A.3</span>The right way to think: from mechanism to Exporter tree</h2>
+    <p>
+      Before opening the Exporter, take a step back. SolidWorks tells you "this part is the chassis, this is the
+      wheel, this is the bolt, this is the motor, this is the gearbox, this is the spring..." — that is, it sees
+      the assembly in terms of <strong>part count</strong>. But ROS never asks "how many parts do you have?" ROS
+      only has one question:
+    </p>
+    <div class="box idea">
+      <div class="box-title">💡 The Most Important Sentence in This Appendix</div>
+      <p>
+        Which things move together like a single rigid body, and what motions exist between these bodies?
+        <br>
+        <strong>Link = rigid body</strong> — <strong>Joint = the motion relationship between two rigid bodies.</strong>
+      </p>
+    </div>
+
+    <h3>Step one: solve the mechanism on paper before touching the Exporter</h3>
+    <p>Never go straight into the URDF Exporter. First ask yourself: what stays fixed? What rotates? What moves up and down? What moves as one unit with something else?</p>
+    <p>For example, consider a simple robot with a chassis, motor, gearbox, shaft, wheel, and camera. Suppose the motor and gearbox housing are bolted together, the gearbox output shaft rotates, the wheel is locked onto the shaft, and the camera is fixed to the body. From ROS's point of view, this is grouped as follows:</p>
+    <pre><code>Chassis + Camera      → one Link (or Fixed Links)
+Motor + Gearbox housing → one Link
+Shaft + Wheel           → one Link</code></pre>
+    <p>Why do the shaft and wheel become one Link? Because the shaft doesn't move relative to the wheel — both rotate together.</p>
+
+    <h3>The Golden Rule of Links</h3>
+    <div class="box idea">
+      <div class="box-title">💡 One Question, Always</div>
+      <p>Whenever you're unsure whether two parts should be one Link or not, just ask: <strong>do these two parts move relative to each other?</strong> If the answer is "no," they can probably be one Link.</p>
+    </div>
+    <p>For example, <code>Wheel + Hub + Shaft</code>, if all locked together, become one <code>wheel_link</code>. But <code>Wheel</code> and <code>Gearbox Housing</code> move relative to each other, so they cannot be one Link.</p>
+
+    <h3>The Golden Rule of Joints</h3>
+    <p>
+      A Joint is not a physical part. <code>wheel_joint</code>, <code>arm_joint</code>, <code>suspension_joint</code>,
+      and <code>camera_joint</code> are none of them parts in SolidWorks; a Joint only says "how does this Link
+      move relative to that Link." For example:
+    </p>
+    <pre><code>gearbox_link
+↓ wheel_joint
+wheel_link</code></pre>
+    <p>Meaning <code>wheel_link</code> rotates relative to <code>gearbox_link</code>.</p>
+
+    <h3>Four joint types that cover 90% of projects</h3>
+    <table>
+      <tr><th>Type</th><th>Motion</th><th>Example</th></tr>
+      <tr><td><code>fixed</code></td><td>No motion at all</td><td>A camera bolted to the chassis: <code>base_link ↓fixed camera_link</code></td></tr>
+      <tr><td><code>continuous</code></td><td>Unlimited rotation</td><td>Wheels, motors, rotating shafts: <code>gearbox_link ↓continuous wheel_link</code></td></tr>
+      <tr><td><code>revolute</code></td><td>Limited rotation</td><td>An arm joint between -90 and +90 degrees: <code>arm_link_1 ↓revolute arm_link_2</code></td></tr>
+      <tr><td><code>prismatic</code></td><td>Linear motion</td><td>A linear rail, jack, ball screw, or lift: <code>base_link ↓prismatic linear_stage_link</code></td></tr>
+    </table>
+
+    <figure class="figure">
+      <svg viewBox="0 0 930 300" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, sans-serif" style="direction:ltr" direction="ltr">
+        <defs>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3d4bf5"/>
+          </marker>
+          <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/>
+          </marker>
+          <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#0e9e6e"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="930" height="300" fill="#fffefb"/>
+
+        <g transform="translate(20,20)">
+          <rect x="0" y="0" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">base_link</text>
+          <line x1="90" y1="46" x2="90" y2="140" stroke="#c8862c" stroke-width="4"/>
+          <g transform="translate(75,78)">
+            <rect x="0" y="10" width="30" height="22" rx="4" fill="#fdf3e4" stroke="#c8862c" stroke-width="2"/>
+            <path d="M6,10 v-8 a9,9 0 0 1 18,0 v8" fill="none" stroke="#c8862c" stroke-width="3"/>
+          </g>
+          <rect x="0" y="140" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">camera_link</text>
+          <rect x="20" y="200" width="140" height="28" rx="14" fill="#fdf3e4" stroke="#f2ddb3"/>
+          <text x="90" y="219" text-anchor="middle" font-size="13" font-weight="700" fill="#c8862c">fixed</text>
+          <text x="90" y="250" text-anchor="middle" font-size="12" fill="#7a7568">no relative motion</text>
+        </g>
+
+        <g transform="translate(250,20)">
+          <rect x="0" y="0" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">gearbox_link</text>
+          <line x1="90" y1="46" x2="90" y2="140" stroke="#3d4bf5" stroke-width="4"/>
+          <path d="M 90 108 m -18 0 a 18 18 0 1 1 12 17" fill="none" stroke="#3d4bf5" stroke-width="3" marker-end="url(#arrow-blue)"/>
+          <rect x="0" y="140" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">wheel_link</text>
+          <rect x="10" y="200" width="160" height="28" rx="14" fill="#eef0ff" stroke="#d6dafc"/>
+          <text x="90" y="219" text-anchor="middle" font-size="13" font-weight="700" fill="#2732b8">continuous</text>
+          <text x="90" y="250" text-anchor="middle" font-size="12" fill="#7a7568">unlimited rotation</text>
+        </g>
+
+        <g transform="translate(480,20)">
+          <rect x="0" y="0" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">arm_link_1</text>
+          <line x1="90" y1="46" x2="90" y2="140" stroke="#8b5cf6" stroke-width="4"/>
+          <path d="M 72 108 a 18 18 0 0 1 30 -12" fill="none" stroke="#8b5cf6" stroke-width="3" marker-end="url(#arrow-purple)"/>
+          <line x1="90" y1="90" x2="90" y2="80" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="3,3"/>
+          <line x1="108" y1="118" x2="116" y2="124" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="3,3"/>
+          <rect x="0" y="140" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">arm_link_2</text>
+          <rect x="15" y="200" width="150" height="28" rx="14" fill="#f4effe" stroke="#e2d6fb"/>
+          <text x="90" y="219" text-anchor="middle" font-size="13" font-weight="700" fill="#6d3fc4">revolute</text>
+          <text x="90" y="250" text-anchor="middle" font-size="12" fill="#7a7568">limited rotation (-90° to +90°)</text>
+        </g>
+
+        <g transform="translate(710,20)">
+          <rect x="0" y="0" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">base_link</text>
+          <line x1="65" y1="46" x2="65" y2="140" stroke="#c9d0d9" stroke-width="2" stroke-dasharray="4,4"/>
+          <line x1="115" y1="46" x2="115" y2="140" stroke="#c9d0d9" stroke-width="2" stroke-dasharray="4,4"/>
+          <line x1="90" y1="60" x2="90" y2="126" stroke="#0e9e6e" stroke-width="4" marker-end="url(#arrow-green)" marker-start="url(#arrow-green)"/>
+          <rect x="0" y="140" width="180" height="46" rx="10" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="90" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#211f1a">linear_stage_link</text>
+          <rect x="10" y="200" width="160" height="28" rx="14" fill="#eafaf3" stroke="#c9eeda"/>
+          <text x="90" y="219" text-anchor="middle" font-size="13" font-weight="700" fill="#0e9e6e">prismatic</text>
+          <text x="90" y="250" text-anchor="middle" font-size="12" fill="#7a7568">linear motion</text>
+        </g>
+      </svg>
+      <figcaption>Four joint types that cover 90% of projects — each label's color matches the same Joint's color in the table above</figcaption>
+    </figure>
+
+    <h3>Why springs are confusing</h3>
+    <p>
+      A spring is not a rigid body — it shortens, lengthens, and deforms; but a standard URDF is built around
+      rigid bodies. So you need to separate two things:
+    </p>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Spring mesh ≠ Suspension motion</div>
+      <p>
+        If you want the spring itself to be visible in RViz, create a <code>spring_link</code> and put the
+        spring's Mesh inside it. But the spring's <strong>behavior</strong> (the gearbox moving up and down
+        relative to the chassis) is defined by a separate Joint, e.g.
+        <code>base_link ↓suspension_joint gearbox_link</code>. The spring's visual model and the motion the
+        spring produces are two separate things.
+      </p>
+    </div>
+
+    <h3>Conceptual tree versus the actual Exporter tree — a note that once caused a real error</h3>
+    <p>Suppose you have a project with a body, a gearbox, and a wheel, and the actual motion is: body ↓suspension gearbox ↓rotation wheel. The <strong>conceptual</strong> URDF tree (just for understanding the system) looks like this:</p>
+    <pre><code>base_link
+└── suspension_joint
+    └── gearbox_link
+        └── wheel_joint
+            └── wheel_link</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ This is not the tree you build in the SolidWorks Exporter</div>
+      <p>Inside the SolidWorks URDF Exporter you only build <strong>Links</strong>; Joints are never separate Nodes in the Tree. The same system above becomes this in the Exporter:</p>
+      <pre style="margin-top:12px;"><code>❌ Wrong:
+base_link
+└── suspension_joint
+    └── gearbox_link
+
+✅ Correct:
+base_link
+└── gearbox_link</code></pre>
+      <p style="margin-bottom:0;">And inside the settings of that same <code>gearbox_link</code> you write: <code>Joint Name: suspension_joint</code>.</p>
+    </div>
+
+    <h3>How does the Exporter understand the Parent/Child relationship?</h3>
+    <p>Suppose you build this Tree in the Exporter:</p>
+    <pre><code>base_link
+└── gearbox_link
+    └── wheel_link</code></pre>
+    <p>When you click on <code>gearbox_link</code>, you write <code>Link Name: gearbox_link</code> and <code>Joint Name: suspension_joint</code>. From these two lines alone, the Exporter understands <code>Parent = base_link</code>, <code>Child = gearbox_link</code>, <code>Joint = suspension_joint</code>. You repeat the same thing on <code>wheel_link</code> with <code>Joint Name: wheel_joint</code> and <code>Joint Type: Continuous</code> so the Exporter understands <code>gearbox_link ↓wheel_joint wheel_link</code>.</p>
+
+    <figure class="figure">
+      <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, sans-serif" style="direction:ltr" direction="ltr">
+        <defs>
+          <marker id="arrow-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#7a7568"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="900" height="340" fill="#fffefb"/>
+
+        <g transform="translate(30,20)">
+          <rect x="0" y="0" width="360" height="300" rx="14" fill="#f1efe8" stroke="#e6e1d6" stroke-width="1.5"/>
+          <rect x="0" y="0" width="360" height="40" rx="14" fill="#20223a"/>
+          <rect x="0" y="26" width="360" height="14" fill="#20223a"/>
+          <circle cx="22" cy="20" r="6" fill="#ff5f57"/>
+          <circle cx="42" cy="20" r="6" fill="#febc2e"/>
+          <circle cx="62" cy="20" r="6" fill="#28c840"/>
+          <text x="220" y="25" text-anchor="middle" font-size="13" font-weight="700" fill="#d8dcff">SolidWorks URDF Exporter</text>
+
+          <rect x="16" y="58" width="20" height="20" rx="4" fill="#3d4bf5"/>
+          <text x="46" y="73" font-size="14" font-weight="700" fill="#211f1a">base_link</text>
+
+          <line x1="26" y1="78" x2="26" y2="108" stroke="#c9c4b4" stroke-width="1.5"/>
+          <line x1="26" y1="108" x2="46" y2="108" stroke="#c9c4b4" stroke-width="1.5"/>
+          <rect x="46" y="98" width="290" height="30" rx="6" fill="#eef0ff" stroke="#3d4bf5" stroke-width="1.5"/>
+          <rect x="56" y="103" width="20" height="20" rx="4" fill="#2732b8"/>
+          <text x="86" y="118" font-size="13" font-weight="700" fill="#2732b8">gearbox_link (selected)</text>
+
+          <line x1="46" y1="128" x2="46" y2="158" stroke="#c9c4b4" stroke-width="1.5"/>
+          <line x1="46" y1="158" x2="66" y2="158" stroke="#c9c4b4" stroke-width="1.5"/>
+          <rect x="66" y="148" width="20" height="20" rx="4" fill="#3d4bf5"/>
+          <text x="96" y="163" font-size="14" font-weight="700" fill="#211f1a">wheel_link</text>
+        </g>
+
+        <path d="M 400 133 C 440 133 440 133 470 133" stroke="#7a7568" stroke-width="2.5" fill="none" marker-end="url(#arrow-gray)"/>
+
+        <g transform="translate(480,58)">
+          <rect x="0" y="0" width="380" height="180" rx="14" fill="#fffefb" stroke="#e6e1d6" stroke-width="1.5"/>
+          <text x="20" y="30" font-size="14" font-weight="800" fill="#2732b8">Link Properties</text>
+          <line x1="20" y1="42" x2="360" y2="42" stroke="#e6e1d6"/>
+
+          <text x="20" y="68" font-size="13" fill="#7a7568">Link Name</text>
+          <rect x="140" y="54" width="220" height="24" rx="6" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="150" y="71" font-size="13" fill="#211f1a" font-family="JetBrains Mono, monospace">gearbox_link</text>
+
+          <text x="20" y="102" font-size="13" fill="#7a7568">Joint Name</text>
+          <rect x="140" y="88" width="220" height="24" rx="6" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="150" y="105" font-size="13" fill="#211f1a" font-family="JetBrains Mono, monospace">suspension_joint</text>
+
+          <text x="20" y="136" font-size="13" fill="#7a7568">Joint Type</text>
+          <rect x="140" y="122" width="220" height="24" rx="6" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="150" y="139" font-size="13" fill="#211f1a" font-family="JetBrains Mono, monospace">Fixed ▾</text>
+
+          <text x="20" y="170" font-size="13" fill="#7a7568">Parent Link</text>
+          <rect x="140" y="156" width="220" height="24" rx="6" fill="#f1efe8" stroke="#e6e1d6"/>
+          <text x="150" y="173" font-size="13" fill="#211f1a" font-family="JetBrains Mono, monospace">base_link</text>
+        </g>
+
+        <g transform="translate(480,258)">
+          <rect x="0" y="0" width="380" height="62" rx="14" fill="#eafaf3" stroke="#c9eeda"/>
+          <text x="190" y="26" text-anchor="middle" font-size="13" font-weight="800" fill="#0e9e6e">What does this mean?</text>
+          <text x="190" y="46" text-anchor="middle" font-size="13" fill="#215c46" font-family="JetBrains Mono, monospace">base_link → suspension_joint → gearbox_link</text>
+        </g>
+      </svg>
+      <figcaption>Clicking any Link in the Tree opens the Link Properties form for that Link — the Joint is defined within this form, not as a separate Node in the Tree</figcaption>
+    </figure>
+
+    <h3>What does a Component mean?</h3>
+    <p>
+      Every Link needs to know which SolidWorks parts belong to it. For example, <code>gearbox_link</code> might
+      contain <code>Gearbox_Housing.SLDPRT</code>, <code>Motor_Housing.SLDPRT</code>, and
+      <code>Motor_Bracket.SLDPRT</code> — since these three parts don't move relative to each other, you assign
+      them all to the same Link. Likewise, for <code>wheel_link</code> you might assign
+      <code>Wheel.SLDPRT</code>, <code>Hub.SLDPRT</code>, and <code>Output_Shaft.SLDPRT</code>.
+    </p>
+
+    <h3>The root Link and naming rules</h3>
+    <p>Every URDF must have exactly one root — usually <code>base_link</code> — meaning everything eventually connects to it:</p>
+    <pre><code>base_link
+├── left_wheel_link
+├── right_wheel_link
+├── lidar_link
+├── camera_link
+└── arm_link</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Two independent roots is wrong</div>
+      <p>If <code>camera_link</code> isn't connected to anything, the URDF will have two independent roots — the same <code>Two root links found</code> error we saw in the common errors table.</p>
+    </div>
+    <p>Establish a consistent naming convention from the start — it's not mandatory, but it's extremely useful:</p>
+    <pre><code>Link  → ends in _link   (base_link, left_wheel_link, gearbox_link, camera_link, lidar_link)
+Joint → ends in _joint  (left_wheel_joint, camera_joint, suspension_joint)</code></pre>
+    <p>And don't reuse names — no two Links with the same name, no two Joints with the same name. The only exception is <code>base_link</code> itself, which, being the Root, has no Joint at all (its <code>Joint Name</code> stays empty); every other Link must have a Joint Name.</p>
+
+    <h3>The Joint axis and Coordinate System</h3>
+    <p>
+      If a Joint is movable, ROS needs to know which axis it moves around: <code>1 0 0</code> for X,
+      <code>0 1 0</code> for Y, <code>0 0 1</code> for Z. If a wheel shaft runs along Y,
+      <code>axis = 0 1 0</code> — but never assume out of habit that "a wheel is always the Y axis"; you must
+      look at the actual model. As mentioned in the coordinate system section of this appendix, ROS prefers
+      <code>X = Forward</code>, <code>Y = Left</code>, <code>Z = Up</code>, so before exporting, build a
+      <code>ROS_Coordinate_System</code> in SolidWorks and put the origin somewhere logical, such as the center
+      of the chassis or the center of the wheel axis.
+    </p>
+
+    <h3>Full example: from mechanism to the final Exporter tree</h3>
+    <p>Suppose you have a new project with a Body, Motor, Gearbox, Output Shaft, Wheel, and Camera. The actual motion is: the Body is fixed relative to the Motor+Gearbox, the Motor/Gearbox rotates relative to the Output Shaft+Wheel, and the Body is fixed relative to the Camera. So the Links become:</p>
+    <pre><code>base_link
+gearbox_link
+wheel_link
+camera_link</code></pre>
+    <p>And the actual tree inside the SolidWorks Exporter:</p>
+    <pre><code>base_link
+├── gearbox_link
+│   └── wheel_link
+└── camera_link</code></pre>
+    <p>With the following settings on each Child Link:</p>
+    <pre><code>gearbox_link → Joint Name: gearbox_mount_joint  | Joint Type: Fixed
+wheel_link   → Joint Name: wheel_joint          | Joint Type: Continuous
+camera_link  → Joint Name: camera_joint         | Joint Type: Fixed</code></pre>
+
+    <h3>Checklist before clicking Preview and Export</h3>
+    <div class="checkpoint">
+      <strong style="display:block; margin-bottom:12px; color:var(--text);">✅ Check these before exporting</strong>
+      <ul>
+        <li>The Tree contains only Links — I haven't built Joints as separate Nodes</li>
+        <li><code>base_link</code> is exactly one and has no Joint</li>
+        <li>Every Child Link has a defined Joint Name</li>
+        <li>All Links have unique names</li>
+        <li>All Joints have unique names</li>
+        <li>Each Link's Components are correctly identified and assigned</li>
+        <li>Parts that move together are grouped into a single Link</li>
+        <li>Parts that move relative to each other are in separate Links</li>
+        <li>Each Joint's type (fixed/continuous/revolute/prismatic) is chosen correctly</li>
+        <li>Each Joint's axis matches the model's actual geometry</li>
+        <li>The Coordinate System is sensible (X-forward, Y-left, Z-up)</li>
+        <li>Mass Properties for every part make sense</li>
+      </ul>
+    </div>
+
+    <div class="box def">
+      <div class="box-title">📖 Five Rules Worth Memorizing on Their Own</div>
+      <p>1. Link = rigid body.</p>
+      <p>2. Joint = motion between two Links.</p>
+      <p>3. Parts that don't move relative to each other → one Link.</p>
+      <p>4. Inside the SolidWorks Exporter, the Tree is built only from Links.</p>
+      <p style="margin-bottom:0;">5. Each Child Link's Joint is defined within that Child Link's settings — not as a separate Node.</p>
+    </div>
+
+    <p>And the overall thought process for every new project should follow this same path:</p>
+    <pre><code>CAD parts
+↓
+Which parts move together?
+↓
+Rigid Body Groups
+↓
+Links
+↓
+Motion between Links
+↓
+Joints
+↓
+Conceptual URDF Tree
+↓
+SolidWorks Tree = Links Only
+↓
+Assign Components
+↓
+Configure Joint on Child Link
+↓
+Preview
+↓
+Export URDF
+↓
+ROS 2 validation</code></pre>
+    <p>This is exactly the logic we apply, step by step, on the real ARCHO example, throughout the rest of this appendix.</p>
+  </section>
+
+  <section id="assembly-prep">
+    <h2><span class="num">A.4</span>Preparing the SolidWorks assembly</h2>
+    <p>
+      This is the most important part of the whole job. Most URDF problems don't come from the Exporter itself;
+      they come from a messy SolidWorks assembly.
+    </p>
+    <div class="box idea">
+      <div class="box-title">💡 The Core Rule</div>
+      <p>Any part that is supposed to <strong>move</strong> relative to another part must be an independent Link. Parts that never move relative to each other don't need separate Links.</p>
+    </div>
+    <p>
+      Suppose ARCHO's chassis assembly has these parts: chassis, cover, battery, electronics board, brackets,
+      left wheel, right wheel, caster wheel, LiDAR, and camera. Since the chassis, cover, battery, board, and
+      brackets never move relative to each other, they all become part of a single Link:
+    </p>
+    <pre><code>base_link
+├── chassis
+├── cover
+├── battery
+├── electronics
+└── brackets</code></pre>
+    <p>But the wheels and sensors need independent Links:</p>
+    <pre><code>left_wheel_link
+right_wheel_link
+caster_link
+lidar_link
+camera_link</code></pre>
+    <p>The suggested assembly structure in SolidWorks looks roughly like this:</p>
+    <pre><code>archo_assembly.SLDASM
+│
+├── base_subassembly.SLDASM
+│   ├── chassis.SLDPRT
+│   ├── top_cover.SLDPRT
+│   ├── battery.SLDPRT
+│   ├── motor_mount_left.SLDPRT
+│   └── motor_mount_right.SLDPRT
+│
+├── left_wheel.SLDPRT
+├── right_wheel.SLDPRT
+├── caster.SLDPRT
+├── lidar.SLDPRT
+└── camera.SLDPRT</code></pre>
+
+    <h3>Fixing the chassis, floating the wheels</h3>
+    <p>In SolidWorks, the main chassis must be Fixed. Right-click the chassis in the FeatureManager and select:</p>
+    <pre><code>Right Click → Fix</code></pre>
+    <p>You should see an <code>(f)</code> marker next to the chassis, e.g. <code>(f) base_chassis</code>. The wheels must not be Fixed — if they are, right-click them and select <code>Float</code>. The correct structure looks like this:</p>
+    <pre><code>(f) base_chassis
+(-) left_wheel
+(-) right_wheel
+(-) caster</code></pre>
+
+    <h3>Proper Mates for each wheel</h3>
+    <p>The Exporter uses the assembly structure, Mates, and your selections to build the Joints. Every wheel needs at least these two Mates:</p>
+    <ul>
+      <li><strong>Concentric Mate</strong> — aligns the wheel axis with the motor or shaft axis: <code>Mate → Concentric</code></li>
+      <li><strong>Coincident or Distance Mate</strong> — sets the wheel's lateral position: <code>Mate → Coincident</code> or <code>Mate → Distance</code></li>
+    </ul>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common mistake</div>
+      <p>
+        The <code>Lock Rotation</code> option must not be enabled, otherwise the wheel won't be able to rotate
+        in the exported URDF. To test, rotate the wheel with the mouse — if it turns freely about its own axis,
+        the Mate is defined correctly. Do this for both wheels (left and right).
+      </p>
+    </div>
+  </section>
+
+  <section id="coordinate-system">
+    <h2><span class="num">A.5</span>The ROS coordinate system and Coordinate System</h2>
+    <p>ROS uses a standard coordinate convention: X forward, Y left, Z up.</p>
+    <pre><code>Top view:
+             +X
+         front of robot
+              ↑
+              |
+ +Y  ←  [ ARCHO ]  →  -Y
+              |
+              ↓
+             -X
+
+Side view:
+       +Z
+        ↑
+        |
+        |
+        └────→ +X</code></pre>
+    <p>
+      If your SolidWorks model's coordinate system doesn't match this convention, ARCHO may appear lying down,
+      upside down, or facing the wrong direction in RViz, or the wheels may rotate about the wrong axis.
+    </p>
+    <p>To fix this at the root, build a dedicated coordinate system in SolidWorks:</p>
+    <pre><code>Insert
+→ Reference Geometry
+→ Coordinate System</code></pre>
+    <p>Name it, for example, <code>ROS_Coordinate_System</code> and set the axes like this:</p>
+    <pre><code>X = Forward
+Y = Left
+Z = Up</code></pre>
+    <figure class="figure" style="max-width:280px; margin-inline:auto;">
+      <img src="images/solidworks-coordinate-system-triad-reference.png" alt="The blue three-axis X-Y-Z triad that SolidWorks shows when creating a Coordinate System" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>You'll see this same blue Triad in SolidWorks — before continuing, always compare the X, Y, and Z directions against this shape</figcaption>
+    </figure>
+    <p>Preferably place the origin at one of these points: the geometric center of the chassis, the midpoint between the two wheel axes, on the ground plane below the robot's center, or the center of the base plate.</p>
+    <p>
+      In a real assembly, you typically repeat this not just once, but for every Link and every Joint separately
+      — a Coordinate System for the chassis, one for each wheel, one for each Caster. The result ends up looking
+      like this: dozens of small Triads, each sitting exactly where a Joint will later be located:
+    </p>
+    <figure class="figure">
+      <img src="images/solidworks-assembly-coordinate-systems-overview.jpg" alt="A real SolidWorks assembly with several Coordinate Systems defined on the wheels and casters" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>Every blue Triad in this assembly is an independent Coordinate System — each one is later linked directly to a Joint in the URDF Exporter</figcaption>
+    </figure>
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Note</div>
+      <p>
+        For a mobile robot, a more professional structure uses two Links: <code>base_footprint</code>, which
+        sits on the ground, and <code>base_link</code>, which sits at the physical center of the chassis. For
+        the first export, it's enough to have just <code>base_link</code>; we'll add
+        <code>base_footprint</code> to the URDF by hand later — just as we discussed in Chapter 5 (TF2) about
+        the tree of coordinate frames.
+      </p>
+    </div>
+  </section>
+
+  <section id="mass-material">
+    <h2><span class="num">A.6</span>Material, mass, and inertia</h2>
+    <p>
+      A URDF isn't just a 3D picture; for physical simulation it also needs dynamic properties. SolidWorks can
+      compute mass, center of mass, moments of inertia, and the inertia tensor from each part's Material and
+      geometry.
+    </p>
+    <p>For every part or Subassembly, define a real Material:</p>
+    <pre><code>Right Click on Material
+→ Edit Material</code></pre>
+    <p>For example Aluminum 6061, ABS, Steel, or Rubber — whichever is closest to the real part. Then check:</p>
+    <pre><code>Evaluate
+→ Mass Properties</code></pre>
+    <p>You should see sensible numbers for Mass, Center of Mass, Principal Axes, and Moments of Inertia. The Exporter can transfer this information directly into the <code>&lt;inertial&gt;</code> tag in URDF.</p>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Common mistake</div>
+      <p>
+        If a Material isn't defined, or the mass is computed incorrectly, the robot may fly off in Gazebo, the
+        wheels may jitter, the model may sink into the ground, the simulation may become unstable, or ARCHO may
+        tip over from a small contact. This is exactly the class of errors we discussed in Chapter 7 (Gazebo)
+        regarding the importance of Inertia.
+      </p>
+    </div>
+
+    <h3>The Configure Link Properties page — where mass becomes a number</h3>
+    <p>
+      After you've defined all the Joints, the Exporter shows you one more page: <strong>Configure Link
+      Properties</strong>. This is no longer about motion; it's about how heavy each Link is, where its mass is
+      concentrated, and what color we see it in.
+    </p>
+    <figure class="figure">
+      <img src="images/sw2urdf-exporter-03-link-properties.png" alt="The Configure Link Properties page in the SolidWorks URDF Exporter with fields for Mass, Moment of Inertia, Visual/Collision Origin, Mesh Detail, and Color" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>The Configure Link Properties page for <code>left_wheel</code> — the top section (Inertial) is computed directly from the CAD, the bottom section (Visual and Collision Meshes) determines the Link's appearance and physical behavior</figcaption>
+    </figure>
+    <p>This page has two main sections; let's go through each one separately.</p>
+
+    <h4>Top section: Inertial — the same thing we discussed a few lines ago</h4>
+    <p>
+      If you've defined the Material correctly, the Exporter pulls these numbers straight from the CAD — you no
+      longer need to guess:
+    </p>
+    <table>
+      <tr><th>Field</th><th>What it means</th></tr>
+      <tr><td><strong>Mass (kg)</strong></td><td>The Link's actual mass, computed from the volume and Density of the chosen material — not an assumed number.</td></tr>
+      <tr><td><strong>Inertial Origin (x, y, z)</strong></td><td>The location of the Center of Mass relative to the Link's frame. It doesn't need to sit exactly at zero — for example, <code>x=-0.0001, y=-0.025, z=0</code> is perfectly normal.</td></tr>
+      <tr><td><strong>Moment of Inertia — ixx, iyy, izz</strong></td><td>The body's resistance to rotation about each of the three principal axes, in kg·m².</td></tr>
+      <tr><td><strong>Moment of Inertia — ixy, ixz, iyz</strong></td><td>The cross-coupling terms of the inertia tensor; for nearly symmetric bodies these are usually very small numbers.</td></tr>
+    </table>
+    <p>These six numbers together form the Link's inertia matrix and go directly into the <code>&lt;inertial&gt;</code> tag in URDF — the same tag we'll see again a few lines later in the full sample URDF.</p>
+
+    <h4>Bottom section: Visual and Collision Meshes</h4>
+    <table>
+      <tr><th>Field</th><th>What it means</th></tr>
+      <tr><td><strong>Origin (m) / Roll-Pitch-Yaw</strong></td><td>If the Mesh isn't exactly at the Link's origin, this is where you enter the needed offset and rotation.</td></tr>
+      <tr><td><strong>Mesh Detail — Coarse</strong></td><td>Fewer triangles → smaller file, faster loading, less computational load for RViz and Gazebo.</td></tr>
+      <tr><td><strong>Mesh Detail — Fine</strong></td><td>More triangles → more accurate appearance, but a larger and heavier file. For most ROS projects, Fine doesn't offer a noticeable benefit.</td></tr>
+      <tr><td><strong>Color — Red / Green / Blue</strong></td><td>The Visual Mesh color, each a number between 0 and 1.</td></tr>
+      <tr><td><strong>Color — Alpha</strong></td><td>Transparency level: 1 means fully opaque, 0 means fully transparent.</td></tr>
+      <tr><td><strong>Material name</strong></td><td>A name that can be shared across multiple Links, e.g. <code>wheel_rubber</code> or <code>black_plastic</code>, so the color is defined once and reused everywhere.</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Reminder of the Visual/Collision Golden Rule</div>
+      <p>
+        This page builds both a Visual and a Collision entry for each Link — and the same rule we look at in
+        more detail a few pages later applies here too: a precise Mesh is good for Visual, but for Collision
+        it's better to use a simple Box or Cylinder so that Gazebo doesn't have to compute collisions against
+        thousands of tiny triangles.
+      </p>
+    </div>
+  </section>
+
+  <section id="installing-exporter">
+    <h2><span class="num">A.7</span>Installing the SolidWorks URDF Exporter</h2>
+    <p>
+      The classic, well-known tool is the <strong>SolidWorks to URDF Exporter</strong> project from the ROS
+      organization. This tool converts a SolidWorks assembly into URDF, Mesh files, and the initial structure of
+      a ROS package.
+    </p>
+    <p>After installing the Exporter:</p>
+    <ol>
+      <li>Open SolidWorks.</li>
+      <li>Go to <code>Tools → Add-Ins</code>.</li>
+      <li>Find the <code>SolidWorks to URDF Exporter</code> option.</li>
+      <li>Enable both the <code>Active Add-ins</code> and <code>Start Up</code> checkboxes.</li>
+    </ol>
+    <p>After this step, the Export command should appear at the bottom of the Tools menu: <code>Tools → Export as URDF</code>.</p>
+    <div class="box mistake">
+      <div class="box-title">⚠️ If the Exporter doesn't appear in Add-ins</div>
+      <p>
+        Check that SolidWorks was closed during installation, that you ran the Installer with
+        <code>Run as administrator</code>, that the Exporter version is compatible with your SolidWorks version,
+        that Windows hasn't blocked the DLL file, and that you restarted SolidWorks after installation.
+      </p>
+    </div>
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering Note — a newer tool</div>
+      <p>
+        For newer SolidWorks versions, a newer tool called <code>sw2robot</code> has also been introduced,
+        which works as a Standalone tool using COM, analyzes Mates, and has a browser-based editor for adjusting
+        axes, Joint Limits, and Collision. This tool can be a good replacement in versions where the classic
+        Add-in has issues. That said, this appendix's teaching path uses the classic Exporter, because you
+        should understand the resulting URDF structure by hand — exactly what you learned in raw form in
+        Chapter 4.
+      </p>
+    </div>
+  </section>
+
+  <section id="defining-links">
+    <h2><span class="num">A.8</span>Defining Links, Joints, and axes</h2>
+    <p>Open ARCHO's main assembly and go to <code>Tools → Export as URDF</code>. A <strong>URDF Exporter</strong> window opens with an empty tree on the left — the place where Links will appear one by one. To know where you're headed, first look at a real example of a completed tree:</p>
+    <figure class="figure">
+      <img src="images/sw2urdf-exporter-01-link-tree.png" alt="The SolidWorks URDF Exporter window with a complete Link tree including base_link, wheels, and four Casters" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>A real, complete tree in the URDF Exporter: <code>base_link</code> at the root, two drive wheels, and four Casters, each with its own sub-Link for its small wheel — exactly what we'll build step by step a few lines from now</figcaption>
+    </figure>
+    <p>When you expand each row of this tree, the Exporter shows you two small buttons: one for adding a new child Link, and one for defining Components (which SolidWorks parts belong inside this Link). We now go through this process step by step for ARCHO.</p>
+
+    <h3>Base Link</h3>
+    <p>The first Link must be the robot's base part: <code>base_link</code>. Select all the fixed chassis parts for it — the body, cover, fixed brackets, battery, computer, electronics boards, and any motors that have a fixed housing.</p>
+    <p>In the Exporter, enter the Link name precisely and without spaces; use only lowercase English letters, digits, and underscores:</p>
+    <table>
+      <tr><th>Bad name</th><th>Good name</th></tr>
+      <tr><td>Base Link</td><td>base_link</td></tr>
+      <tr><td>Main Body</td><td>chassis</td></tr>
+      <tr><td>Robot Chassis 1</td><td>base_link</td></tr>
+      <tr><td>Main Chassis (in another language)</td><td>base_link</td></tr>
+    </table>
+
+    <h3>Left and right wheels</h3>
+    <p>Create a Child Link for <code>base_link</code> named <code>left_wheel_link</code> and set:</p>
+    <pre><code>Parent Link: base_link
+Child Link: left_wheel_link
+Joint Name: left_wheel_joint</code></pre>
+    <p>You have two common choices for the Joint type:</p>
+    <table>
+      <tr><th>Joint type</th><th>Use case</th></tr>
+      <tr><td><code>continuous</code></td><td>A wheel that can rotate without limit — the right choice for ARCHO's drive wheels</td></tr>
+      <tr><td><code>revolute</code></td><td>A joint that only rotates within a range, e.g. a robot arm between -90 and +90 degrees</td></tr>
+    </table>
+    <p>For ARCHO's wheel, select <code>Joint Type: Continuous</code>.</p>
+
+    <div class="box eng">
+      <div class="box-title">🔧 The Joint's rotation axis</div>
+      <p>
+        In ROS, a Joint's axis is specified by a three-component vector, e.g. <code>&lt;axis xyz="0 1 0"/&gt;</code>.
+        Three common cases: <code>1 0 0</code> for rotation about X, <code>0 1 0</code> for rotation about Y,
+        and <code>0 0 1</code> for rotation about Z. For a typical two-wheeled robot whose front faces X, the
+        wheel shaft axis is usually Y, so <code>&lt;axis xyz="0 1 0"/&gt;</code>. The opposite wheel may need
+        the reversed direction (<code>0 -1 0</code>) — but first export both with the correct geometric axis;
+        the motor command direction can also be corrected later in ros2_control.
+      </p>
+    </div>
+
+    <p>Define the right wheel exactly like the left one:</p>
+    <pre><code>Parent Link: base_link
+Child Link: right_wheel_link
+Joint Name: right_wheel_joint
+Joint Type: continuous
+Axis: 0 1 0</code></pre>
+    <p>The tree so far looks like this:</p>
+    <pre><code>base_link
+├── left_wheel_joint
+│   └── left_wheel_link
+└── right_wheel_joint
+    └── right_wheel_link</code></pre>
+
+    <h3>What's going on inside the Configure Joint Properties page?</h3>
+    <p>
+      When you double-click a Joint in the tree, the Exporter takes you to a more detailed page — where you
+      actually define exactly where this joint is, which axis it moves around, and how much power it has. The
+      first time you see this page it can look a bit crowded, but each section answers one simple question:
+    </p>
+    <figure class="figure">
+      <img src="images/sw2urdf-exporter-02-joint-properties.png" alt="The Configure Joint Properties page in the SolidWorks URDF Exporter with fields for Parent Link, Child Link, Joint Type, Origin, Axis, Limit, Dynamics, and Safety Controller" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>The Configure Joint Properties page for <code>left_wheel_joint</code> — Parent, Child, Origin, Axis, Limit, Dynamics, and Safety Controller all in one view</figcaption>
+    </figure>
+    <p>Let's read this page like a map, section by section:</p>
+    <table>
+      <tr><th>Section</th><th>What it means</th></tr>
+      <tr><td><strong>Parent Link / Child Link</strong></td><td>The two ends of the Joint — e.g. <code>base_link</code> and <code>left_wheel</code>. This is the same relationship we discussed in the previous section.</td></tr>
+      <tr><td><strong>Joint Name / Joint Type</strong></td><td>The Joint's name and its type (fixed / continuous / revolute / prismatic).</td></tr>
+      <tr><td><strong>Coordinates</strong></td><td>References the same Coordinate System you built earlier in SolidWorks — the Exporter uses it to compute the Joint's position and orientation relative to the Parent.</td></tr>
+      <tr><td><strong>Axis</strong></td><td>The same Reference Axis you built — it says which axis the joint rotates about or which direction it slides along.</td></tr>
+      <tr><td><strong>Origin — Position (m)</strong></td><td>The <code>x / y / z</code> coordinates of the Joint's location relative to the Parent, in meters.</td></tr>
+      <tr><td><strong>Origin — Orientation (rad)</strong></td><td><code>Roll / Pitch / Yaw</code> — the rotation of the Joint's frame relative to the Parent, in radians. If you built your Coordinate Systems correctly from the start, this often stays zero.</td></tr>
+      <tr><td><strong>Limit — lower / upper</strong></td><td>The minimum and maximum travel of the Joint (radians for rotational, meters for linear). Usually left empty for <code>continuous</code>.</td></tr>
+      <tr><td><strong>Limit — effort</strong></td><td>The maximum allowed force or torque on the Joint (N·m for rotational, N for linear) — best taken from the actual motor and gearbox specifications.</td></tr>
+      <tr><td><strong>Limit — velocity</strong></td><td>The Joint's maximum speed (rad/s or m/s). For a wheel it can be computed from <code>ω = v / r</code>, where <code>v</code> is the robot's linear speed and <code>r</code> is the wheel radius.</td></tr>
+      <tr><td><strong>Dynamics — friction / damping</strong></td><td>The Joint's internal friction and velocity-dependent resistance. These two numbers later make the Joint's behavior in Gazebo softer or stiffer and usually need tuning.</td></tr>
+      <tr><td><strong>Calibration — rising / falling</strong></td><td>The Joint's calibration reference; not needed for most simple wheeled robots.</td></tr>
+      <tr><td><strong>Safety Controller</strong></td><td>Soft limits (<code>soft lower/upper limit</code>, <code>k position</code>, <code>k velocity</code>) — mostly useful for robotic arms and limited joints; usually left empty for a <code>continuous</code> wheel.</td></tr>
+      <tr><td><strong>Mimic Other Joint</strong></td><td>Used when one Joint's motion is a direct function of another Joint — e.g. two fingers of a Gripper that always open and close together.</td></tr>
+    </table>
+    <div class="box idea">
+      <div class="box-title">💡 A tip that saves a lot of time</div>
+      <p>
+        If you've built the Coordinate System and Axis correctly in SolidWorks, most fields on this page —
+        especially Origin and Axis — fill in correctly on their own. The reverse is also true: whenever
+        something looks wrong here, it's usually a sign you need to go back and fix the Coordinate System in
+        the earlier step, rather than manually patching the numbers on this page.
+      </p>
+    </div>
+
+    <h3>Sensors — LiDAR and camera</h3>
+    <p>
+      If the LiDAR is bolted to the body and doesn't move, you have two options. The first is to keep the LiDAR
+      model inside the chassis Mesh — simple, but you won't have an independent TF frame for the LiDAR later.
+      The second, more professional option is to create an independent Link with a Fixed Joint:
+    </p>
+    <pre><code>Parent: base_link
+Child: lidar_link
+Joint: lidar_joint
+Type: fixed</code></pre>
+    <p>Which looks like this in URDF:</p>
+    <pre><code>&lt;joint name="lidar_joint" type="fixed"&gt;
+  &lt;parent link="base_link"/&gt;
+  &lt;child link="lidar_link"/&gt;
+  &lt;origin xyz="0.25 0 0.35" rpy="0 0 0"/&gt;
+&lt;/joint&gt;</code></pre>
+    <p>Do the same for the camera: <code>camera_link</code>, <code>camera_joint</code>, type <code>fixed</code>. The final Link tree:</p>
+    <pre><code>base_link
+├── left_wheel_link
+├── right_wheel_link
+├── caster_link
+├── lidar_link
+└── camera_link</code></pre>
+
+    <h3>Caster Wheel</h3>
+    <p>For initial testing, the simplest and most stable choice is to connect the Caster with a Fixed Joint (<code>caster_joint</code>, <code>type="fixed"</code>). The fully physical model — with two independent motions, <code>caster_swivel_joint</code> and <code>caster_wheel_joint</code> — is more complex in Gazebo and sometimes unstable, so we save it for later.</p>
+  </section>
+
+  <section id="visual-collision">
+    <h2><span class="num">A.9</span>Collision versus Visual</h2>
+    <p>Every Link usually has two separate geometry models: <strong>Visual</strong>, which the user sees, and <strong>Collision</strong>, which the physics engine uses for collisions. Visual can be detailed and beautiful; Collision is better kept simple.</p>
+    <p>For example, the chassis Visual can be a complex STL:</p>
+    <pre><code>&lt;visual&gt;
+  &lt;geometry&gt;
+    &lt;mesh filename="package://archo_description/meshes/base_link.stl"/&gt;
+  &lt;/geometry&gt;
+&lt;/visual&gt;</code></pre>
+    <p>But the Collision is better as a simple shape like a Box:</p>
+    <pre><code>&lt;collision&gt;
+  &lt;geometry&gt;
+    &lt;box size="0.60 0.45 0.20"/&gt;
+  &lt;/geometry&gt;
+&lt;/collision&gt;</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Why a complex STL is bad for Collision</div>
+      <p>
+        Because it makes the simulation heavy, causes unstable collisions, makes the robot jitter, forces
+        Gazebo to do more processing, and lets the wheels catch on small body details. Simple rule:
+        <strong>precise Visual Mesh, simple Collision Mesh.</strong>
+      </p>
+    </div>
+    <p>
+      The same logic applies to Mesh quality; very high quality increases file size and slows down RViz and
+      Gazebo. For ARCHO, a medium- or good-quality Visual Mesh and a simple or simplified Collision shape is
+      enough.
+    </p>
+  </section>
+
+  <section id="exporting">
+    <h2><span class="num">A.10</span>Exporting and transferring files to WSL</h2>
+    <p>Pick a simple path on Windows and avoid spaces, non-English characters, or special characters in the path:</p>
+    <table>
+      <tr><th>Bad path</th><th>Good path</th></tr>
+      <tr><td><code>C:\Users\Pouya\Desktop\my new robot\</code></td><td><code>C:\ros_exports\archo_description\</code></td></tr>
+    </table>
+    <p>Then run Export. The output typically looks like this:</p>
+    <pre><code>archo_description/
+├── CMakeLists.txt
+├── package.xml
+├── launch/
+├── meshes/
+│   ├── base_link.STL
+│   ├── left_wheel_link.STL
+│   ├── right_wheel_link.STL
+│   ├── lidar_link.STL
+│   └── camera_link.STL
+├── textures/
+└── urdf/
+    └── archo.urdf</code></pre>
+
+    <h3>Transferring from Windows to WSL</h3>
+    <p>If your Workspace is <code>~/ros2_ws</code> and the Windows output is at <code>C:\ros_exports\archo_description</code>, in WSL this path corresponds to <code>/mnt/c/ros_exports/archo_description</code>.</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> cd ~/ros2_ws/src<br>
+<span class="term-prompt">$</span> cp -r /mnt/c/ros_exports/archo_description .<br>
+<span class="term-prompt">$</span> ls<br>
+<span class="term-out">archo_bringup  archo_description</span><br>
+<span class="term-prompt">$</span> sudo apt install tree<br>
+<span class="term-prompt">$</span> tree ~/ros2_ws/src/archo_description
+      </div>
+    </div>
+
+    <h3>Fixing the STL filenames</h3>
+    <p>Linux is case-sensitive; <code>base_link.STL</code> and <code>base_link.stl</code> are two completely different files. It's best to lowercase all Meshes:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> cd ~/ros2_ws/src/archo_description/meshes<br>
+<span class="term-prompt">$</span> mv base_link.STL base_link.stl<br>
+<span class="term-prompt">$</span> mv left_wheel_link.STL left_wheel_link.stl<br>
+<span class="term-prompt">$</span> mv right_wheel_link.STL right_wheel_link.stl
+      </div>
+    </div>
+    <p>Then also fix the names inside the URDF from <code>base_link.STL</code> to <code>base_link.stl</code>.</p>
+
+    <div class="box mistake">
+      <div class="box-title">⚠️ Check the Mesh path</div>
+      <p>
+        The correct path structure is always <code>package://package_name/folder/file</code>, e.g.
+        <code>&lt;mesh filename="package://archo_description/meshes/base_link.stl"/&gt;</code>. There should be
+        no leftover Windows path (<code>C:\Users\...</code>) or absolute Linux path (<code>/home/...</code>) in
+        the URDF.
+      </p>
+    </div>
+  </section>
+
+  <section id="building-package">
+    <h2><span class="num">A.11</span>Building the ROS 2 package</h2>
+
+    <h3>CMakeLists.txt</h3>
+    <pre><code>cmake_minimum_required(VERSION 3.8)
+project(archo_description)
+
+find_package(ament_cmake REQUIRED)
+
+install(
+  DIRECTORY
+    launch
+    meshes
+    urdf
+  DESTINATION share/${PROJECT_NAME}
+)
+
+ament_package()</code></pre>
+
+    <h3>package.xml</h3>
+    <pre><code>&lt;?xml version="1.0"?&gt;
+&lt;package format="3"&gt;
+  &lt;name&gt;archo_description&lt;/name&gt;
+  &lt;version&gt;0.0.1&lt;/version&gt;
+
+  &lt;description&gt;
+    URDF description package for the ARCHO mobile robot.
+  &lt;/description&gt;
+
+  &lt;maintainer email="pouya@example.com"&gt;
+    Pouya Mansournia
+  &lt;/maintainer&gt;
+
+  &lt;license&gt;Apache-2.0&lt;/license&gt;
+
+  &lt;buildtool_depend&gt;ament_cmake&lt;/buildtool_depend&gt;
+
+  &lt;exec_depend&gt;robot_state_publisher&lt;/exec_depend&gt;
+  &lt;exec_depend&gt;joint_state_publisher&lt;/exec_depend&gt;
+  &lt;exec_depend&gt;joint_state_publisher_gui&lt;/exec_depend&gt;
+  &lt;exec_depend&gt;rviz2&lt;/exec_depend&gt;
+  &lt;exec_depend&gt;xacro&lt;/exec_depend&gt;
+
+  &lt;export&gt;
+    &lt;build_type&gt;ament_cmake&lt;/build_type&gt;
+  &lt;/export&gt;
+&lt;/package&gt;</code></pre>
+
+    <h3>Launch File for RViz</h3>
+    <pre><code>from pathlib import Path
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description() -&gt; LaunchDescription:
+    package_name = "archo_description"
+    urdf_file_name = "archo.urdf"
+
+    package_share = Path(get_package_share_directory(package_name))
+    urdf_path = package_share / "urdf" / urdf_file_name
+
+    if not urdf_path.exists():
+        raise FileNotFoundError(f"URDF file not found: {urdf_path}")
+
+    robot_description = urdf_path.read_text(encoding="utf-8")
+
+    return LaunchDescription(
+        [
+            Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                name="robot_state_publisher",
+                output="screen",
+                parameters=[{"robot_description": robot_description}],
+            ),
+            Node(
+                package="joint_state_publisher_gui",
+                executable="joint_state_publisher_gui",
+                name="joint_state_publisher_gui",
+                output="screen",
+            ),
+            Node(
+                package="rviz2",
+                executable="rviz2",
+                name="rviz2",
+                output="screen",
+            ),
+        ]
+    )</code></pre>
+    <p>The official ROS 2 documentation uses <code>robot_state_publisher</code> to display a URDF; this Node converts the URDF model and Joint states into TF so tools like RViz can show the robot's structure.</p>
+
+    <h3>Build</h3>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> cd ~/ros2_ws<br>
+<span class="term-prompt">$</span> source /opt/ros/jazzy/setup.bash<br>
+<span class="term-prompt">$</span> colcon build --packages-select archo_description --symlink-install<br>
+<span class="term-out">Summary: 1 package finished</span><br>
+<span class="term-prompt">$</span> source install/setup.bash<br>
+<span class="term-prompt">$</span> ros2 pkg prefix archo_description<br>
+<span class="term-out">/home/pouya_mn/ros2_ws/install/archo_description</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="testing-rviz">
+    <h2><span class="num">A.12</span>Testing in RViz and checking TF</h2>
+    <div class="box idea">
+      <div class="box-title">💡 A shortcut before ROS: Online URDF Viewer</div>
+      <p>
+        Before you even go near a terminal and ROS, there's a faster way to see your result: an
+        <a href="https://urdf-viewer-pi.vercel.app/" target="_blank" rel="noopener">online URDF Viewer</a>
+        that opens <code>URDF</code>, <code>XACRO</code>, <code>STL</code>, and <code>DAE</code> files via
+        Drag & Drop right in your browser, showing the 3D model and the initial motion of the Joints. This tool
+        doesn't replace RViz or Gazebo, but for a quick check — is the robot's orientation correct? Are the
+        wheels in the right place? Did the Meshes load? — it's great, and it surfaces obvious errors before you
+        spend the time setting everything up in WSL.
+      </p>
+    </div>
+    <p>After this quick check, it's time for a more serious review. First check the URDF file before anything else:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> sudo apt install liburdfdom-tools ros-jazzy-urdf-tutorial ros-jazzy-joint-state-publisher-gui<br>
+<span class="term-prompt">$</span> check_urdf src/archo_description/urdf/archo.urdf<br>
+<span class="term-out">robot name is: archo</span><br>
+<span class="term-out">---------- Successfully Parsed XML ---------------</span><br>
+<span class="term-out">root Link: base_link has 5 child(ren)</span><br>
+<span class="term-out">    child(1): left_wheel_link</span><br>
+<span class="term-out">    child(2): right_wheel_link</span><br>
+<span class="term-out">    child(3): caster_link</span><br>
+<span class="term-out">    child(4): lidar_link</span><br>
+<span class="term-out">    child(5): camera_link</span>
+      </div>
+    </div>
+    <p>Then run:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> ros2 launch archo_description display.launch.py
+      </div>
+    </div>
+    <p>In RViz: set <code>Fixed Frame</code> to <code>base_link</code>, click <code>Add</code>, and add both the <code>RobotModel</code> and <code>TF</code> displays. If the model is correct, the chassis and wheels appear, the TF tree is complete, and the Joints can be changed using the Joint State Publisher.</p>
+    <figure class="figure">
+      <img src="images/ros-rviz.png" alt="The RViz environment with the Displays panel on the left, the 3D scene in the center, and the Views panel on the right" style="max-width:100%; height:auto; display:block; margin:0 auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);">
+      <figcaption>The RViz environment — the Displays panel on the left (where you add RobotModel and TF), the 3D scene in the center, and the Views panel on the right for controlling the camera</figcaption>
+    </figure>
+    <p>If the model isn't visible but there's no error either, check these Topics:</p>
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dot" style="background:#ff5f57;"></div>
+        <div class="term-dot" style="background:#febc2e;"></div>
+        <div class="term-dot" style="background:#28c840;"></div>
+      </div>
+      <div class="term-body">
+<span class="term-prompt">$</span> ros2 topic list<br>
+<span class="term-out">/joint_states</span><br>
+<span class="term-out">/robot_description</span><br>
+<span class="term-out">/tf</span><br>
+<span class="term-out">/tf_static</span><br>
+<span class="term-prompt">$</span> ros2 run tf2_tools view_frames
+      </div>
+    </div>
+    <p>The last command produces a <code>frames.pdf</code> file after a few seconds, which can be opened in Windows from WSL with <code>explorer.exe frames.pdf</code>, and it should show ARCHO's same five-branch tree.</p>
+  </section>
+
+  <section id="troubleshooting">
+    <h2><span class="num">A.13</span>Common errors and how to fix them</h2>
+    <table>
+      <tr><th>Error / symptom</th><th>Likely cause</th><th>Fix</th></tr>
+      <tr><td>Two root links found</td><td>A Link has no Parent Joint (e.g. <code>camera_link</code>)</td><td>Define a <code>&lt;joint type="fixed"&gt;</code> for that Link</td></tr>
+      <tr><td>Could not load resource</td><td>Wrong filename casing or wrong <code>package://</code> path</td><td>Carefully check the package name, meshes folder, stl extension, and path</td></tr>
+      <tr><td>The model is far too large</td><td>SolidWorks exported in millimeters but URDF reads meters</td><td>Add <code>scale="0.001 0.001 0.001"</code> to the mesh tag — only if the Exporter isn't already handling scale itself</td></tr>
+      <tr><td>The model is far too small</td><td>Scale applied twice (the STL was already in meters)</td><td>Remove the extra <code>scale</code> from the mesh tag</td></tr>
+      <tr><td>The robot appears lying down</td><td>The SolidWorks coordinate system doesn't match ROS's X-forward/Y-left/Z-up convention</td><td>Preferably fix the Coordinate System in SolidWorks; temporary workaround: <code>rpy="1.5708 0 0"</code> (90 degrees in radians)</td></tr>
+      <tr><td>The wheel is in the wrong place</td><td>The <code>origin xyz</code> value in the Joint is wrong</td><td>Recheck the order <code>xyz = X Y Z</code> and <code>rpy = Roll Pitch Yaw</code> — all angles are in radians</td></tr>
+      <tr><td>The wheel rotates about the wrong axis</td><td>The <code>&lt;axis xyz=".."/&gt;</code> vector is wrong</td><td>Match the <code>1 0 0</code>/<code>0 1 0</code>/<code>0 0 1</code> axes with the wheel's actual geometry</td></tr>
+      <tr><td>The wheel doesn't rotate at all</td><td>The Joint was built as <code>fixed</code></td><td>Change the Joint type to <code>continuous</code></td></tr>
+      <tr><td>Joint State Publisher shows no Slider for the wheel</td><td><code>continuous</code> Joints have no fixed numeric limit</td><td>For a temporary test make it <code>revolute</code> with <code>limit lower="-3.14" upper="3.14"</code>, then switch back to <code>continuous</code></td></tr>
+    </table>
+  </section>
+
+  <section id="sample-urdf">
+    <h2><span class="num">A.14</span>Full sample URDF</h2>
+    <p>This sample is only for understanding the structure — the inertias and dimensions (chassis size, wheel radius) are illustrative, do not match the values from Chapter 4, and should not be used directly for the real ARCHO; before use, replace every number with your own robot's actual dimensions:</p>
+    <pre><code>&lt;?xml version="1.0"?&gt;
+&lt;robot name="archo"&gt;
+
+  &lt;link name="base_link"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="package://archo_description/meshes/base_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;box size="0.60 0.45 0.20"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+
+    &lt;inertial&gt;
+      &lt;origin xyz="0 0 0"/&gt;
+      &lt;mass value="20.0"/&gt;
+      &lt;inertia
+        ixx="0.40" ixy="0.0" ixz="0.0"
+        iyy="0.65" iyz="0.0"
+        izz="0.80"/&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+
+  &lt;link name="left_wheel_link"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="package://archo_description/meshes/left_wheel_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="0.10" length="0.04"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+
+    &lt;inertial&gt;
+      &lt;mass value="0.8"/&gt;
+      &lt;inertia
+        ixx="0.004" ixy="0.0" ixz="0.0"
+        iyy="0.004" iyz="0.0"
+        izz="0.007"/&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="left_wheel_joint" type="continuous"&gt;
+    &lt;parent link="base_link"/&gt;
+    &lt;child link="left_wheel_link"/&gt;
+    &lt;origin xyz="0 0.245 -0.10" rpy="0 0 0"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+  &lt;/joint&gt;
+
+  &lt;link name="right_wheel_link"&gt;
+    &lt;visual&gt;
+      &lt;geometry&gt;
+        &lt;mesh filename="package://archo_description/meshes/right_wheel_link.stl"/&gt;
+      &lt;/geometry&gt;
+    &lt;/visual&gt;
+
+    &lt;collision&gt;
+      &lt;geometry&gt;
+        &lt;cylinder radius="0.10" length="0.04"/&gt;
+      &lt;/geometry&gt;
+    &lt;/collision&gt;
+
+    &lt;inertial&gt;
+      &lt;mass value="0.8"/&gt;
+      &lt;inertia
+        ixx="0.004" ixy="0.0" ixz="0.0"
+        iyy="0.004" iyz="0.0"
+        izz="0.007"/&gt;
+    &lt;/inertial&gt;
+  &lt;/link&gt;
+
+  &lt;joint name="right_wheel_joint" type="continuous"&gt;
+    &lt;parent link="base_link"/&gt;
+    &lt;child link="right_wheel_link"/&gt;
+    &lt;origin xyz="0 -0.245 -0.10" rpy="0 0 0"/&gt;
+    &lt;axis xyz="0 1 0"/&gt;
+  &lt;/joint&gt;
+
+&lt;/robot&gt;</code></pre>
+  </section>
+
+  <section id="summary">
+    <h2><span class="num">A.15</span>Summary, checklist, and exercise</h2>
+    <p>
+      Exporting from SolidWorks isn't the end of the job; it's a starting point. After exporting, these
+      refinements are usually needed: fixing up Link and Joint names, converting URDF to Xacro (Chapter 4),
+      simplifying Collisions, rechecking Inertia, adding <code>base_footprint</code>, adding Sensor Frames,
+      adding <code>ros2_control</code> (Chapter 8), adding Gazebo plugins (Chapter 7), defining wheel radius and
+      spacing, and a full test in RViz and then Gazebo before connecting to the real controller.
+    </p>
+    <div class="checkpoint">
+      <strong style="display:block; margin-bottom:12px; color:var(--text);">✅ Checklist for this appendix</strong>
+      <ul>
+        <li>I opened and reviewed ARCHO's main assembly</li>
+        <li>I fixed the chassis and floated the wheels</li>
+        <li>I connected the wheels with proper Mates (Concentric + Coincident/Distance)</li>
+        <li>I checked the Material and Mass Properties of each part</li>
+        <li>I built a ROS Coordinate System (X-forward, Y-left, Z-up)</li>
+        <li>I activated the SolidWorks URDF Exporter</li>
+        <li>I defined <code>base_link</code>, <code>left_wheel_link</code>, and <code>right_wheel_link</code></li>
+        <li>I exported the URDF and Meshes and transferred them to <code>~/ros2_ws/src</code></li>
+        <li>I checked the file with <code>check_urdf</code></li>
+        <li>I saw the robot in RViz without errors and confirmed the TF tree</li>
+      </ul>
+    </div>
+    <div class="exercise">
+      <div class="level">Hands-on Exercise</div>
+      <p>
+        Prepare ARCHO's SolidWorks assembly (or any other robot you have on hand) following the steps in this
+        appendix, export the URDF, and load it into the <code>archo_description</code> package. Then use
+        <code>check_urdf</code> and RViz to confirm the model displays without errors and the wheels rotate
+        about the correct axis. Finally, save the output of <code>view_frames</code> and compare the TF tree
+        with the tree expected in this appendix.
+      </p>
+    </div>
+
+    <div class="box real">
+      <div class="box-title">🌍 Real-World Example: from this exact path to a real robot</div>
+      <p>
+        All of these steps — from preparing the assembly in SolidWorks to exporting the URDF and loading it
+        into a ROS 2 package — are exactly the path implemented in the
+        <a href="https://github.com/Pouya-Mansournia/warehouse-amr-ros2" target="_blank" rel="noopener">warehouse-amr-ros2</a>
+        repository: a warehouse AMR robot whose body and wheels were converted from SolidWorks to URDF using
+        this exact method. If you want to see a complete, real example of this process — not just a teaching
+        example — go check out that repository.
+      </p>
+    </div>
+
+    <div class="box def">
+      <div class="box-title">📖 For Further Reading</div>
+      <p>This appendix can be read alongside these official resources:</p>
+      <p>
+        <a href="https://docs.ros.org/en/ros2_documentation/lyrical/Tutorials/Intermediate/URDF/Building-a-Movable-Robot-Model-with-URDF.html" target="_blank" rel="noopener">Official ROS 2 documentation — Building a Movable Robot Model with URDF</a>
+      </p>
+      <p>
+        <a href="https://control.ros.org/master/doc/ros2_controllers/doc/mobile_robot_kinematics.html" target="_blank" rel="noopener">ros2_control documentation — Mobile Robot Kinematics</a>
+      </p>
+      <p style="margin-bottom:0;">
+        <a href="https://urdf-viewer-pi.vercel.app/" target="_blank" rel="noopener">Online URDF Viewer</a> — the same fast Drag & Drop tool introduced in the RViz testing section.
+      </p>
+    </div>
+
+    <h3>Glossary</h3>
+    <dl class="glossary">
+      <dt>URDF</dt><dd>Unified Robot Description Format — the XML file that describes a robot's mechanical structure for ROS.</dd>
+      <dt>Link</dt><dd>An independent rigid body in the URDF tree.</dd>
+      <dt>Joint</dt><dd>The connection between two Links that defines their relative motion type and axis.</dd>
+      <dt>Continuous Joint</dt><dd>A joint that rotates with no angular limit — suited to drive wheels.</dd>
+      <dt>Revolute Joint</dt><dd>A joint that only moves within a specific angular range.</dd>
+      <dt>Prismatic Joint</dt><dd>A joint that moves linearly instead of rotating — like a rail, jack, or lift.</dd>
+      <dt>Fixed Joint</dt><dd>A connection with no relative motion at all — used for sensors like LiDAR and cameras.</dd>
+      <dt>Mimic Joint</dt><dd>A state where one Joint's motion is computed directly from another Joint — like two fingers of a Gripper.</dd>
+      <dt>Visual</dt><dd>The geometry the user sees in RViz/Gazebo; can be detailed and complex.</dd>
+      <dt>Collision</dt><dd>The geometry the physics engine uses to compute collisions; should be simple.</dd>
+      <dt>Inertial</dt><dd>The URDF tag that defines each Link's mass, center of mass, and inertia tensor.</dd>
+      <dt>base_footprint</dt><dd>An auxiliary Link that sits on the ground plane, separate from <code>base_link</code> (which sits at the physical center of the chassis).</dd>
+      <dt>package://</dt><dd>The standard ROS path prefix for referencing files inside a package, such as Meshes.</dd>
+    </dl>
+  </section>
+
+  <div class="footer-nav">
+    <div>Appendix A of "ROS 2: Zero to Robot"</div>
+    <div>Related to Chapter 4 (URDF and Xacro) and Chapter 7 (Gazebo)</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#f1efe8',
+      primaryColor: '#e7f0fe',
+      primaryTextColor: '#211f1a',
+      primaryBorderColor: '#2f7de8',
+      lineColor: '#0f9d78',
+      secondaryColor: '#e7f0fe',
+      tertiaryColor: '#f1efe8',
+      fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>
