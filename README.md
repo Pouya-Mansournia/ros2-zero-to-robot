@@ -69,17 +69,21 @@ The book covers the complete path from ROS 2 fundamentals to real-world deployme
 - Sim-to-real deployment
 - Reliability and safety considerations for real robots
 
-A dedicated practical appendix also covers the complete:
+Two dedicated appendices go deeper on topics that sit outside the main chapter flow:
 
-**SolidWorks → URDF → ROS 2**
+**Appendix A — SolidWorks → URDF → ROS 2**
 
-workflow for real robot assemblies, including coordinate systems, parent-child relationships, joints, axes, exported meshes, validation, and debugging.
+The complete workflow for real robot assemblies, including coordinate systems, parent-child relationships, joints, axes, exported meshes, validation, and debugging.
+
+**Appendix B — ROS 2 Distributions and Lyrical Luth**
+
+A reference guide to ROS 2 distributions, LTS vs. non-LTS releases, Rolling Ridley, and a full working guide to ROS 2 Lyrical Luth: installation, environment setup, CLI commands, workspaces, DDS/QoS, debugging, and migration from Humble/Jazzy/Kilted.
 
 ---
 
 ## Book Structure
 
-The book contains **20 chapters and one practical appendix**, organized into six major parts.
+The book contains **20 chapters and two appendices**, organized into six major parts.
 
 | Part | Focus |
 | --- | --- |
@@ -89,7 +93,8 @@ The book contains **20 chapters and one practical appendix**, organized into six
 | **Part IV** | Perception & Autonomy — sensor fusion, SLAM, Nav2, Behavior Trees, and MoveIt 2 |
 | **Part V** | Scaling & Software Delivery — multi-robot architecture, Docker, and CI/CD |
 | **Part VI** | Industrial Deployment — Jetson, Raspberry Pi, ESP32, CAN, EtherCAT, DDS/QoS, and sim-to-real |
-| **Appendix** | Practical SolidWorks-to-URDF workflow for real robotic assemblies |
+| **Appendix A** | Practical SolidWorks-to-URDF workflow for real robotic assemblies |
+| **Appendix B** | ROS 2 distributions, LTS strategy, and a working guide to ROS 2 Lyrical Luth |
 
 ---
 
