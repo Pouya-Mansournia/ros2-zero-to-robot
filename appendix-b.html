@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('ros2-book-theme');
+    if(!t){ t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appendix B — ROS 2 Distributions and Lyrical Luth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#fffefb;
+    --panel2:#f1efe8;
+    --border:#e6e1d6;
+    --text:#211f1a;
+    --muted:#7a7568;
+    --accent:#3d4bf5;
+    --accent-ink:#2732b8;
+    --accent2:#0e9e6e;
+    --gold:#c8862c;
+    --danger:#d64a3c;
+    --purple:#8b5cf6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.85;
+    font-size:17.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 120px;}
+
+  .cover{
+    border-radius:28px;
+    background:#12142b;
+    padding:64px 44px;
+    margin-bottom:56px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .cover::before{
+    content:"";
+    position:absolute; inset:-40%;
+    background:
+      radial-gradient(38% 45% at 15% 20%, rgba(61,75,245,0.55), transparent 70%),
+      radial-gradient(35% 40% at 85% 15%, rgba(139,92,246,0.45), transparent 70%),
+      radial-gradient(45% 50% at 60% 90%, rgba(14,158,110,0.35), transparent 70%);
+    filter:blur(60px);
+    z-index:0;
+  }
+  .cover::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index:0;
+  }
+  .cover > *{position:relative; z-index:1;}
+  .kicker{
+    display:inline-block; color:#c9cdff; font-weight:600; letter-spacing:.4px; font-size:13px;
+    margin-bottom:18px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
+    padding:6px 14px; border-radius:999px;
+  }
+  .cover h1{font-size:2.7em; margin:0 0 12px; font-weight:800; line-height:1.3; color:#ffffff; letter-spacing:-.5px;}
+  .cover .subtitle{color:#aeb2d6; font-size:1.2em; margin-bottom:30px; font-weight:400;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .chip{
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:#d4d7f0;
+    padding:7px 15px; border-radius:999px; font-size:.83em;
+  }
+
+  h2{
+    font-size:1.9em; font-weight:800; margin:72px 0 22px;
+    display:flex; align-items:center; gap:14px; letter-spacing:-.3px;
+  }
+  h2 .num{display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border-radius:12px; background:var(--accent); box-shadow:0 6px 16px -4px rgba(61,75,245,0.5); color:#ffffff; font-size:.62em; font-weight:800; flex-shrink:0; white-space:nowrap;}
+  h3{font-size:1.3em; font-weight:700; margin:36px 0 14px; color:var(--accent-ink); letter-spacing:-.2px;}
+  h4{font-size:1.08em; font-weight:700; margin:24px 0 10px; color:var(--purple);}
+  p{margin:0 0 16px; color:#3c382f;}
+  strong{color:var(--text); font-weight:700;}
+
+  a{color:var(--accent);}
+
+  .box{
+    border-radius:16px; padding:20px 24px; margin:22px 0;
+    border:1px solid var(--border); background:var(--panel);
+    position:relative;
+    box-shadow:0 1px 2px rgba(33,31,26,0.03);
+  }
+  .box-title{font-weight:800; margin-bottom:9px; display:flex; align-items:center; gap:8px; font-size:.96em; letter-spacing:.1px;}
+  .box p:last-child{margin-bottom:0;}
+  .box.idea{background:#eef0ff;border-color:#d6dafc;}
+  .box.idea .box-title{color:var(--accent-ink);}
+  .box.mistake{background:#fdeeec; border-color:#f6d2cd;}
+  .box.mistake .box-title{color:var(--danger);}
+  .box.eng{background:#f4effe; border-color:#e2d6fb;}
+  .box.eng .box-title{color:var(--purple);}
+  .box.real{background:#eafaf3; border-color:#c9eeda;}
+  .box.real .box-title{color:var(--accent2);}
+  .box.def{background:#fdf3e4; border-color:#f2ddb3;}
+  .box.def .box-title{color:var(--gold);}
+
+  code, pre{font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left;}
+  code{
+    background:#eceaf9; border:1px solid #dcdaf3; border-radius:6px;
+    padding:2px 7px; font-size:.87em; color:var(--accent-ink);
+    display:inline-block;
+  }
+  pre{
+    background:#181a2e; border-radius:16px;
+    padding:18px 20px; overflow-x:auto; margin:18px 0; font-size:.88em; line-height:1.65;
+    box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);
+  }
+  pre code{background:none; border:none; padding:0; color:#d8dcff; display:block;}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:22px 0; font-size:.9em; border-radius:14px; overflow:hidden; border:1px solid var(--border);}
+  th, td{border-bottom:1px solid var(--border); padding:12px 15px; text-align:left;}
+  th{background:#eceaf9; color:var(--accent-ink); font-weight:700; font-size:.9em;}
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:rgba(33,31,26,0.02);}
+  .table-scroll{overflow-x:auto; margin:22px 0;}
+  .table-scroll table{margin:0; min-width:640px;}
+
+  ul, ol{margin:0 0 16px; padding-inline-start:26px; color:#3c382f;}
+  li{margin-bottom:7px;}
+
+  .figure{margin:28px 0; text-align:center;}
+  .figure svg{max-width:100%; height:auto; background:#fffefb; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+  .figure figcaption{color:var(--muted); font-size:.87em; margin-top:12px;}
+
+  .mermaid{background:#fffefb; border:1px solid var(--border); border-radius:16px; padding:18px; margin:24px 0; text-align:center; box-shadow:0 1px 2px rgba(33,31,26,0.03), 0 16px 32px -20px rgba(33,31,26,0.14);}
+
+  .checkpoint{
+    border-radius:16px; padding:22px 24px; margin:26px 0;
+    background:#eafaf3; border:1px solid #c9eeda;
+  }
+  .checkpoint ul{list-style:none; padding:0; margin:0;}
+  .checkpoint li{padding:9px 0; border-bottom:1px solid rgba(33,31,26,0.06); display:flex; gap:10px; align-items:flex-start;}
+  .checkpoint li:last-child{border-bottom:none;}
+  .checkpoint li::before{content:"◻"; color:var(--accent2); font-size:1.2em; line-height:1;}
+
+  .glossary dt{font-weight:800; color:var(--accent-ink); margin-top:16px;}
+  .glossary dd{margin:4px 0 0; color:var(--muted);}
+
+  .toc{background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 30px;}
+  .toc a{display:block; padding:8px 0; color:#3c382f; text-decoration:none; border-bottom:1px solid rgba(33,31,26,.06); transition:color .15s;}
+  .toc a:last-child{border-bottom:none;}
+  .toc a:hover{color:var(--accent-ink);}
+  .toc a span{color:var(--muted); font-size:.85em; margin-inline-end:10px; font-weight:600;}
+
+  .divider{height:1px; background:linear-gradient(90deg, transparent, var(--border), transparent); margin:52px 0;}
+
+  .footer-nav{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    margin-top:64px; padding-top:26px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:.9em; flex-wrap:wrap;
+  }
+
+  .badge-project{
+    display:inline-block; background:#fdf3e4;
+    border:1px solid #f2ddb3; color:var(--gold); border-radius:8px; padding:3px 11px; font-size:.78em; font-weight:700;
+  }
+
+  .term{background:#181a2e; border-radius:16px; overflow:hidden; margin:22px 0; box-shadow:0 12px 28px -16px rgba(24,26,46,0.5);}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:12px 16px; background:#20223a;}
+  .term-dot{width:11px; height:11px; border-radius:50%;}
+  .term-body{padding:16px 20px; font-family:'JetBrains Mono', monospace; direction:ltr; text-align:left; font-size:.87em; line-height:1.75; color:#d8dcff;}
+  .term-prompt{color:#7ee7c7;} .term-out{color:#9aa0c8;}
+
+  .cmd{border-radius:14px; padding:18px 22px; margin:18px 0; background:var(--panel); border:1px solid var(--border);}
+  .cmd .label{font-size:.72em; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:4px;}
+
+  @media print{
+    body{background:#fff; color:#000;}
+  }
+
+  html[data-theme="dark"]{
+    --bg:#12141c; --panel:#1b1e2a; --panel2:#20232f; --border:#2d3142;
+    --text:#e7e8f2; --muted:#9498b3; --accent:#7c86ff; --accent-ink:#aab1ff;
+    --accent2:#34d399; --gold:#e3a548; --danger:#f0685a; --purple:#a78bfa; --radius:14px;
+  }
+  html[data-theme="dark"] p, html[data-theme="dark"] ul, html[data-theme="dark"] ol, html[data-theme="dark"] .toc a{color:#c7c9dc;}
+  html[data-theme="dark"] code{background:#262a45; border-color:#3a3f5c;}
+  html[data-theme="dark"] th{background:#262a45;}
+  html[data-theme="dark"] tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+  html[data-theme="dark"] .box.idea{background:#1f2242; border-color:#383d6b;}
+  html[data-theme="dark"] .box.mistake{background:#3a2220; border-color:#5c332e;}
+  html[data-theme="dark"] .box.eng{background:#2a2340; border-color:#453a63;}
+  html[data-theme="dark"] .box.real{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .box.def{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .checkpoint{background:#16302a; border-color:#1f4a3d;}
+  html[data-theme="dark"] .checkpoint li{border-bottom-color:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .badge-project{background:#3a2f18; border-color:#5c4826;}
+  html[data-theme="dark"] .cmd{background:#1b1e2a; border-color:#2d3142;}
+  body, .box, .cmd, .checkpoint, .toc, table, code, th{transition:background-color .25s ease, border-color .25s ease, color .25s ease;}
+  #theme-toggle{position:fixed; top:18px; left:18px; z-index:999; width:46px; height:46px; border-radius:50%; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,0.35); transition:transform .15s ease, background-color .25s ease, border-color .25s ease;}
+  #theme-toggle:hover{transform:scale(1.08);}
+  @media (max-width:640px){ #theme-toggle{top:12px; left:12px; width:42px; height:42px; font-size:17px;} }
+</style>
+</head>
+<body>
+<button id="theme-toggle" aria-label="Toggle light/dark mode" title="Light/Dark mode">
+  <span id="theme-toggle-icon">🌙</span>
+</button>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">ROS 2 Learning Path &nbsp;·&nbsp; Reference Appendix</div>
+    <h1>Appendix B: ROS 2 Distributions and Lyrical Luth</h1>
+    <div class="subtitle">Understanding ROS 2 releases, choosing one for a real robot, and working day-to-day with ROS 2 Lyrical Luth</div>
+    <div class="meta-row">
+      <div class="chip">Audience: anyone installing, upgrading, or maintaining a ROS 2 system</div>
+      <div class="chip">Prerequisites: Chapter 1 (Architecture) and Chapter 2 (Development Environment)</div>
+      <div class="chip">Focus distribution: ROS 2 Lyrical Luth</div>
+      <div class="chip">Reading time: 45–60 minutes</div>
+    </div>
+  </div>
+
+  <div class="box mistake">
+    <div class="box-title">⚠️ A note on how to read this appendix</div>
+    <p>
+      ROS 2 releases a new distribution every year, and support windows, package availability, and tooling change
+      with every release. Everything version-specific below (release dates, EOL dates, Ubuntu pairings, Gazebo
+      pairings) was checked against Open Robotics' own release documentation and announcements at the time this
+      book was written. A few narrower technical details — most notably the exact default RMW implementation and
+      the precise C++/Python baseline shipped with Lyrical — could not be confirmed against a primary,
+      directly-fetchable source at writing time and are marked <strong>"not confirmed here — check
+      <code>docs.ros.org</code>"</strong> instead of being guessed. Before you build a production system on any
+      fact in this appendix, re-check it against <a href="https://docs.ros.org">docs.ros.org</a> for your exact
+      distribution, since this information ages the moment a new release ships.
+    </p>
+  </div>
+
+  <div class="toc">
+    <strong style="color:var(--text)">What's in this appendix</strong>
+    <a href="#what-is-a-distro"><span>B.1</span>What is a ROS 2 distribution, and why do they exist?</a>
+    <a href="#timeline"><span>B.2</span>ROS 2 distribution timeline</a>
+    <a href="#lts"><span>B.3</span>LTS versus non-LTS releases</a>
+    <a href="#rolling"><span>B.4</span>Rolling Ridley</a>
+    <a href="#comparison"><span>B.5</span>Humble vs. Jazzy vs. Kilted vs. Lyrical</a>
+    <a href="#lyrical"><span>B.6</span>Introducing ROS 2 Lyrical Luth</a>
+    <a href="#ubuntu"><span>B.7</span>Ubuntu and platform compatibility</a>
+    <a href="#install"><span>B.8</span>Installing ROS 2 Lyrical</a>
+    <a href="#env"><span>B.9</span>Environment setup and sourcing</a>
+    <a href="#verify"><span>B.10</span>Verifying the installation</a>
+    <a href="#commands"><span>B.11</span>Essential ROS 2 CLI commands</a>
+    <a href="#workspaces"><span>B.12</span>Workspaces, colcon, and rosdep</a>
+    <a href="#first-pkg"><span>B.13</span>Creating your first package</a>
+    <a href="#middleware"><span>B.14</span>DDS, RMW, ROS_DOMAIN_ID, and QoS</a>
+    <a href="#debugging"><span>B.15</span>Debugging the ROS graph and rosbag2</a>
+    <a href="#ecosystem"><span>B.16</span>Nav2, ros2_control, Gazebo, and MoveIt 2 on Lyrical</a>
+    <a href="#migration"><span>B.17</span>Migrating from Humble, Jazzy, or Kilted</a>
+    <a href="#deploy"><span>B.18</span>Jetson, Raspberry Pi, and Docker</a>
+    <a href="#choosing"><span>B.19</span>How to choose a ROS 2 distribution</a>
+    <a href="#mistakes"><span>B.20</span>Common mistakes and a cheat sheet</a>
+  </div>
+
+  <section id="what-is-a-distro">
+    <h2><span class="num">B.1</span>What is a ROS 2 distribution, and why do they exist?</h2>
+    <p>
+      A <strong>ROS 2 distribution</strong> (or "distro") is a versioned, tested collection of compatible ROS 2
+      packages — <code>rclcpp</code>, <code>rclpy</code>, <code>colcon</code>, <code>rviz2</code>, <code>tf2</code>,
+      <code>rosbag2</code>, and thousands of community packages — that are all built, released, and supported
+      together against a specific set of operating systems, compilers, and dependency versions.
+    </p>
+    <pre><code>ROS 2
+│
+├── Humble Hawksbill  (LTS)
+├── Jazzy Jalisco     (LTS)
+├── Kilted Kaiju      (non-LTS)
+├── Lyrical Luth      (LTS)
+└── Rolling Ridley    (continuous development)</code></pre>
+    <p>
+      ROS 2 itself is not an operating system — it runs on top of one (mainly Linux, with Tier 1 or Tier 2 support
+      for Windows and, on some releases, macOS). A distribution exists for the same reason a Linux distribution
+      exists: dozens of interdependent packages need to be built, tested, and shipped together against one
+      specific set of library versions, or nothing is guaranteed to work with anything else.
+    </p>
+    <p>Distributions solve five concrete engineering problems:</p>
+    <ul>
+      <li><strong>API stability</strong> — code written against Jazzy's <code>rclcpp</code> API should keep compiling on every Jazzy patch release.</li>
+      <li><strong>Package compatibility</strong> — a package built for Jazzy links against Jazzy's message definitions and library ABI, not Humble's.</li>
+      <li><strong>OS/toolchain alignment</strong> — each distro is tied to a specific Ubuntu LTS (and its GCC, Python, and CMake versions), so binaries just work.</li>
+      <li><strong>Reproducibility</strong> — "it works on my machine" becomes "it works on any machine running the same distro."</li>
+      <li><strong>Planned breaking changes</strong> — deprecated APIs are removed at known release boundaries instead of silently, mid-year.</li>
+    </ul>
+    <div class="box idea">
+      <div class="box-title">💡 Simple idea</div>
+      <p>
+        Think of a ROS 2 distribution the same way you think of an Ubuntu release: not a single program, but a
+        coordinated, tested snapshot of an entire ecosystem, frozen at a point in time and supported for a known
+        window.
+      </p>
+    </div>
+  </section>
+
+  <section id="timeline">
+    <h2><span class="num">B.2</span>ROS 2 distribution timeline</h2>
+    <p>Every ROS 2 distribution is codenamed alphabetically, and (since Foxy) released once a year in May.</p>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Distribution</th><th>Released</th><th>LTS?</th><th>Support ends</th><th>Ubuntu</th><th>Recommended today?</th></tr>
+      <tr><td>Ardent Apalone</td><td>Dec 2017</td><td>No</td><td>Dec 2018</td><td>16.04</td><td>❌ EOL</td></tr>
+      <tr><td>Bouncy Bolson</td><td>Jun 2018</td><td>No</td><td>Jun 2019</td><td>18.04</td><td>❌ EOL</td></tr>
+      <tr><td>Crystal Clemmys</td><td>Dec 2018</td><td>No</td><td>Dec 2019</td><td>18.04</td><td>❌ EOL</td></tr>
+      <tr><td>Dashing Diademata</td><td>May 2019</td><td>Yes</td><td>May 2021</td><td>18.04</td><td>❌ EOL</td></tr>
+      <tr><td>Eloquent Elusor</td><td>Nov 2019</td><td>No</td><td>Nov 2020</td><td>18.04</td><td>❌ EOL</td></tr>
+      <tr><td>Foxy Fitzroy</td><td>May 2020</td><td>Yes</td><td>May 2023</td><td>20.04</td><td>❌ EOL</td></tr>
+      <tr><td>Galactic Geochelone</td><td>May 2021</td><td>No</td><td>Nov 2022</td><td>20.04</td><td>❌ EOL</td></tr>
+      <tr><td>Humble Hawksbill</td><td>May 2022</td><td>Yes</td><td>May 2027</td><td>22.04</td><td>⚠️ Legacy-compatible only</td></tr>
+      <tr><td>Iron Irwini</td><td>May 2023</td><td>No</td><td>Nov 2024</td><td>22.04</td><td>❌ EOL</td></tr>
+      <tr><td>Jazzy Jalisco</td><td>May 2024</td><td>Yes</td><td>May 2029</td><td>24.04</td><td>✅ Still fully supported</td></tr>
+      <tr><td>Kilted Kaiju</td><td>May 2025</td><td>No</td><td>Nov 2026</td><td>24.04</td><td>⚠️ Near end of support</td></tr>
+      <tr><td>Lyrical Luth</td><td>May 2026</td><td>Yes</td><td>May 2031</td><td>26.04</td><td>✅ Recommended for new work</td></tr>
+      <tr><td>Rolling Ridley</td><td>Continuous</td><td>N/A</td><td>Ongoing</td><td>tracks newest Ubuntu</td><td>Dev/maintainers only</td></tr>
+    </table>
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Legacy warning</div>
+      <p>
+        Do not start a new production system on an EOL distribution (anything above Iron in this table) unless
+        you have a specific legacy dependency you cannot yet move off of. EOL means no security patches, no bug
+        fixes, and packages that will progressively stop building against current Ubuntu images.
+      </p>
+    </div>
+  </section>
+
+  <section id="lts">
+    <h2><span class="num">B.3</span>LTS versus non-LTS releases</h2>
+    <p>
+      <strong>LTS (Long Term Support)</strong> distributions — Humble, Jazzy, and Lyrical — get roughly five years
+      of patches and security fixes. Non-LTS distributions like Iron and Kilted get about a year and a half, and
+      exist mainly to ship new capabilities faster between LTS releases.
+    </p>
+    <pre><code>Humble  → LTS  (5 years)
+Jazzy   → LTS  (5 years)
+Kilted  → non-LTS (~18 months)
+Lyrical → LTS  (5 years)</code></pre>
+    <p>Robotics teams care about LTS releases specifically because of:</p>
+    <ul>
+      <li><strong>Deployment lifecycle</strong> — a physical robot fleet is expensive to re-flash and re-validate every year.</li>
+      <li><strong>Hardware qualification</strong> — sensor drivers, vendor SDKs, and safety certifications are validated against one OS/ROS combination and re-validating is costly.</li>
+      <li><strong>Security patching</strong> — LTS distros keep receiving fixes long after a non-LTS release has gone quiet.</li>
+      <li><strong>Maintenance cost</strong> — fewer forced migrations means fewer engineering-hours spent chasing breaking changes instead of building the robot.</li>
+    </ul>
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering decision</div>
+      <p>
+        A production robot shipped on Jazzy in 2025 does not need to move to Lyrical the day it releases. Jazzy is
+        supported until May 2029 — the right question is not "is there a newer LTS?" but "does staying on Jazzy
+        still meet my hardware, driver, and security requirements?"
+      </p>
+    </div>
+  </section>
+
+  <section id="rolling">
+    <h2><span class="num">B.4</span>Rolling Ridley</h2>
+    <p>
+      Rolling Ridley is structurally different from every other entry in the table above: it is not a fixed,
+      dated release — it is a continuously updated development line that tracks the newest Ubuntu and the latest
+      package versions as maintainers merge them.
+    </p>
+    <pre><code>Stable distribution (Jazzy, Lyrical, ...)
+        ↓
+fixed release, fixed lifecycle
+        ↓
+predictable, frozen APIs
+
+Rolling Ridley
+        ↓
+continuously updated
+        ↓
+newest features, but breaking changes can land at any time</code></pre>
+    <p>Rolling exists for package maintainers and Open Robotics itself: every future stable release (the next Lyrical-successor) is branched from Rolling at release time. It is where new features land first and get shaken out before being frozen into a named distribution.</p>
+    <div class="box idea">
+      <div class="box-title">💡 When to use Rolling</div>
+      <p><strong>Use it</strong> if you maintain a package and need to keep it building against upcoming ROS 2 changes, or you need a feature that hasn't shipped in a stable distro yet and you accept the risk.</p>
+      <p><strong>Don't use it</strong> for a production robot, a classroom, or any project where "it worked yesterday" needs to still be true tomorrow.</p>
+    </div>
+  </section>
+
+  <section id="comparison">
+    <h2><span class="num">B.5</span>Humble vs. Jazzy vs. Kilted vs. Lyrical</h2>
+    <p>Rather than a vague "newer is better," here is what actually changed release to release, limited to points that are officially documented:</p>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Area</th><th>Humble</th><th>Jazzy</th><th>Kilted</th><th>Lyrical</th></tr>
+      <tr><td>Ubuntu</td><td>22.04</td><td>24.04</td><td>24.04</td><td>26.04</td></tr>
+      <tr><td>LTS</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Paired Gazebo</td><td>Gazebo Classic / Fortress</td><td>Gazebo Harmonic</td><td>Gazebo Ionic</td><td>Gazebo Jetty</td></tr>
+      <tr><td>Middleware options</td><td>Fast DDS, Cyclone DDS, Connext</td><td>Fast DDS, Cyclone DDS, Connext</td><td>+ Eclipse Zenoh (Tier 1)</td><td>Fast DDS, Cyclone DDS, Connext, Zenoh</td></tr>
+      <tr><td>Python executor perf.</td><td>baseline</td><td>baseline</td><td>C++ Events Executor ported to rclpy</td><td>New EventsCBGExecutor (callback-group events)</td></tr>
+      <tr><td>Async Python support</td><td>—</td><td>—</td><td>—</td><td><code>rclpy</code> <code>AsyncNode</code> (native asyncio)</td></tr>
+      <tr><td>rosbag2</td><td>baseline</td><td>baseline</td><td>multi-bag simultaneous playback, interactive progress bar</td><td>remote recording control via services</td></tr>
+    </table>
+    </div>
+    <div class="box mistake">
+      <div class="box-title">⚠️ What this appendix will not claim</div>
+      <p>
+        Distro-by-distro changes to QoS defaults, the launch system's internals, and colcon/ament internals were
+        not confirmed against a primary source while writing this appendix, so they are deliberately left out
+        here rather than guessed. Check the "Migration" page of each release on <code>docs.ros.org</code> for the
+        authoritative, exhaustive list before relying on a specific behavioral change.
+      </p>
+    </div>
+  </section>
+
+  <section id="lyrical">
+    <h2><span class="num">B.6</span>Introducing ROS 2 Lyrical Luth</h2>
+    <p>
+      <strong>Lyrical Luth</strong> is the 12th official ROS 2 distribution, released in May 2026, and is an LTS
+      release supported until roughly May 2031. It follows Kilted Kaiju (non-LTS) and, like Jazzy before it,
+      pairs with the current Ubuntu LTS — Ubuntu 26.04.
+    </p>
+    <div class="box def">
+      <div class="box-title">📖 Lyrical Luth at a glance</div>
+      <p><strong>Release:</strong> May 2026 &nbsp;·&nbsp; <strong>LTS:</strong> Yes, until ~May 2031</p>
+      <p><strong>Tier 1 platform:</strong> Ubuntu 26.04 (amd64, arm64), Windows 11 / VS2022 (amd64)</p>
+      <p><strong>Tier 2:</strong> RHEL 10 (amd64)</p>
+      <p><strong>Tier 3:</strong> Ubuntu 24.04 (Noble), Debian Trixie, macOS, OpenEmbedded</p>
+      <p style="margin-bottom:0;"><strong>Default RMW / default Python-C++ baseline:</strong> not confirmed here — verify against <code>docs.ros.org/en/lyrical</code> for your build before depending on it.</p>
+    </div>
+    <p>Changes that are specifically attributable to Lyrical (not inherited from Kilted or earlier):</p>
+    <ul>
+      <li><strong>EventsCBGExecutor</strong> — a new callback-group-aware events executor, reported to reduce CPU usage versus the classic single-threaded/multi-threaded executors.</li>
+      <li><strong><code>rclpy</code> <code>AsyncNode</code></strong> — native <code>asyncio</code> integration for writing ROS 2 callbacks as Python coroutines.</li>
+      <li><strong>Zero-copy buffers for byte arrays</strong> — <code>uint8[]</code> message fields now use a <code>rosidl::Buffer&lt;uint8_t&gt;</code> type, enabling zero-copy transfer (currently limited to <code>rmw_fastrtps_cpp</code>).</li>
+      <li><strong>YAML type-tag support</strong> in ROS 2 parameter files, and per-message log severity levels in launch files.</li>
+      <li><strong>Remote rosbag2 recording control</strong> via ROS services, and Fish shell support for the CLI.</li>
+    </ul>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Don't over-attribute</div>
+      <p>
+        Features that already existed in Kilted (the ported C++ Events Executor for Python, Zenoh as Tier 1
+        middleware, multi-bag rosbag2 playback) are <strong>not</strong> Lyrical-specific — Lyrical inherits them.
+        Only the items listed above are new in Lyrical itself.
+      </p>
+    </div>
+    <p>
+      For most robotics teams, Lyrical's practical significance is simpler than any single feature: it is the
+      first LTS after Jazzy, meaning it is the release you plan a five-year deployment lifecycle around if you're
+      starting a new robot today and Jazzy's Ubuntu 24.04 base doesn't already fit your hardware constraints.
+    </p>
+  </section>
+
+  <section id="ubuntu">
+    <h2><span class="num">B.7</span>Ubuntu and platform compatibility</h2>
+    <pre><code>Ubuntu
+│
+├── 20.04 → ROS 2 Foxy       (EOL)
+├── 22.04 → ROS 2 Humble     (LTS, supported)
+├── 24.04 → ROS 2 Jazzy / Kilted
+└── 26.04 → ROS 2 Lyrical    (LTS, current)</code></pre>
+    <p>
+      Each ROS 2 distro binds to one primary Ubuntu LTS because the ROS packages are built against that Ubuntu
+      release's exact GCC, CMake, Python, and system-library versions. Installing "the wrong" ROS distro's <code>.deb</code>
+      packages on a mismatched Ubuntu version will fail to resolve dependencies — it is not a supported
+      combination even where it might technically be coerced to work with a source build.
+    </p>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Support tier</th><th>Meaning</th></tr>
+      <tr><td>Tier 1</td><td>Official binary packages, full CI testing, guaranteed to work</td></tr>
+      <tr><td>Tier 2</td><td>Built and tested, but with a narrower guarantee (e.g. fewer supported package combinations)</td></tr>
+      <tr><td>Tier 3</td><td>Community-maintained or best-effort; may require building from source</td></tr>
+      <tr><td>Unsupported</td><td>Technically possible (source build, container tricks) but not validated by upstream</td></tr>
+    </table>
+    </div>
+    <p>Ubuntu compatibility cascades into everything downstream: the Python interpreter version, the GCC/CMake toolchain, system libraries like Boost and OpenSSL, the DDS implementation packages, and — critically for robotics — which Gazebo release is packaged and tested against your ROS distro.</p>
+  </section>
+
+  <section id="install">
+    <h2><span class="num">B.8</span>Installing ROS 2 Lyrical</h2>
+    <h3>Check your system first</h3>
+    <pre><code>lsb_release -a
+uname -a</code></pre>
+    <p>Confirm you are on the Tier 1 platform (Ubuntu 26.04, amd64 or arm64) before proceeding — installing on a mismatched Ubuntu version is the single most common source of broken ROS 2 installs.</p>
+    <h3>Locale</h3>
+    <pre><code>locale  # check for UTF-8
+
+sudo apt update && sudo apt install locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8</code></pre>
+    <h3>Enable the ROS 2 apt repository</h3>
+    <pre><code>sudo apt install software-properties-common
+sudo add-apt-repository universe
+
+sudo apt update && sudo apt install curl -y
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $VERSION_CODENAME)_all.deb"
+sudo apt install /tmp/ros2-apt-source.deb</code></pre>
+    <p>This is the current (post-Humble) way ROS 2 registers its apt source — it replaced the older manual <code>apt-key</code> + <code>sources.list.d</code> steps you may see in outdated tutorials.</p>
+    <h3>Install</h3>
+    <pre><code>sudo apt update
+sudo apt upgrade
+
+sudo apt install ros-lyrical-desktop</code></pre>
+    <div class="cmd">
+      <div class="label">Desktop vs. ROS-Base</div>
+      <p style="margin:0;"><code>ros-lyrical-desktop</code> includes RViz2, demos, and simulation-adjacent tooling on top of the core libraries — good for a development machine. <code>ros-lyrical-ros-base</code> installs only the core communication libraries and CLI tools, no GUI tooling — the right choice for a robot's onboard computer, a headless server, or a Docker image where every extra megabyte and dependency matters.</p>
+    </div>
+    <pre><code>sudo apt install ros-lyrical-ros-base</code></pre>
+  </section>
+
+  <section id="env">
+    <h2><span class="num">B.9</span>Environment setup and sourcing</h2>
+    <pre><code>source /opt/ros/lyrical/setup.bash</code></pre>
+    <p>
+      Sourcing this script sets the environment variables and shell functions ROS 2 needs to find packages,
+      executables, and message definitions. Without it, commands like <code>ros2</code> won't exist in your shell
+      at all.
+    </p>
+    <pre><code>echo "source /opt/ros/lyrical/setup.bash" >> ~/.bashrc
+source ~/.bashrc</code></pre>
+    <p>Check what got set:</p>
+    <pre><code>printenv | grep ROS</code></pre>
+    <pre><code>ROS_DISTRO=lyrical
+ROS_VERSION=2
+ROS_DOMAIN_ID=0
+ROS_LOCALHOST_ONLY=0</code></pre>
+    <div class="box def">
+      <div class="box-title">📖 Underlay vs. overlay</div>
+      <p><strong>Underlay</strong> — <code>/opt/ros/lyrical</code>, the base ROS 2 install. <strong>Overlay</strong> — your own workspace's <code>install/setup.bash</code>, sourced <em>after</em> the underlay, which layers your custom packages on top without touching the base install.</p>
+    </div>
+  </section>
+
+  <section id="verify">
+    <h2><span class="num">B.10</span>Verifying the installation</h2>
+    <p>Terminal 1:</p>
+    <pre><code>ros2 run demo_nodes_cpp talker</code></pre>
+    <p>Terminal 2:</p>
+    <pre><code>ros2 run demo_nodes_py listener</code></pre>
+    <pre><code>Talker Node
+     │
+     │ /chatter
+     ▼
+Listener Node</code></pre>
+    <p>The talker publishes an incrementing string on <code>/chatter</code>; the listener subscribes and prints what it receives. If both terminals show matching output, your install, your DDS discovery, and your <code>ROS_DOMAIN_ID</code> are all working correctly together.</p>
+  </section>
+
+  <section id="commands">
+    <h2><span class="num">B.11</span>Essential ROS 2 CLI commands</h2>
+    <div class="cmd">
+      <div class="label">Command</div>
+      <pre style="margin:8px 0 0;"><code>ros2 doctor</code></pre>
+      <p style="margin:10px 0 0;"><strong>Meaning:</strong> Checks your ROS 2 environment, network configuration, and installation for common problems. <strong>When to use:</strong> First thing you run when "something is wrong" and you don't know what yet.</p>
+    </div>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Command</th><th>Purpose</th></tr>
+      <tr><td><code>ros2 node list</code> / <code>ros2 node info &lt;node&gt;</code></td><td>See which nodes are running, and what each one publishes/subscribes/serves</td></tr>
+      <tr><td><code>ros2 topic list</code> / <code>echo</code> / <code>info</code> / <code>hz</code></td><td>Inspect topics, watch live data, check publish rate</td></tr>
+      <tr><td><code>ros2 topic pub</code></td><td>Manually publish a message for testing</td></tr>
+      <tr><td><code>ros2 service list</code> / <code>type</code> / <code>call</code></td><td>Inspect and call ROS 2 services</td></tr>
+      <tr><td><code>ros2 action list</code> / <code>info</code> / <code>send_goal</code></td><td>Inspect and trigger long-running actions</td></tr>
+      <tr><td><code>ros2 param list</code> / <code>get</code> / <code>set</code></td><td>Read and change node parameters at runtime</td></tr>
+      <tr><td><code>ros2 interface list</code> / <code>show</code></td><td>List and inspect message/service/action definitions</td></tr>
+      <tr><td><code>ros2 pkg list</code> / <code>executables</code></td><td>List installed packages and their runnable executables</td></tr>
+      <tr><td><code>ros2 run &lt;pkg&gt; &lt;exe&gt;</code></td><td>Run a single node executable</td></tr>
+      <tr><td><code>ros2 launch &lt;pkg&gt; &lt;file&gt;</code></td><td>Start a whole system of nodes together</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="workspaces">
+    <h2><span class="num">B.12</span>Workspaces, colcon, and rosdep</h2>
+    <pre><code>ros2_ws/
+│
+├── src/       ← your source packages
+├── build/     ← intermediate build artifacts
+├── install/   ← what you actually source
+└── log/       ← build/test logs</code></pre>
+    <pre><code>mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws
+colcon build
+source install/setup.bash</code></pre>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Command</th><th>When to use it</th></tr>
+      <tr><td><code>colcon build</code></td><td>Build every package in <code>src/</code></td></tr>
+      <tr><td><code>colcon build --symlink-install</code></td><td>Symlink Python/launch/config files instead of copying — edit-and-rerun without rebuilding, essential during Python development</td></tr>
+      <tr><td><code>colcon build --packages-select &lt;pkg&gt;</code></td><td>Build just one package</td></tr>
+      <tr><td><code>colcon build --packages-up-to &lt;pkg&gt;</code></td><td>Build a package and everything it depends on</td></tr>
+      <tr><td><code>colcon test</code> / <code>colcon test-result</code></td><td>Run and inspect a package's tests</td></tr>
+    </table>
+    </div>
+    <div class="box def">
+      <div class="box-title">📖 apt vs. pip vs. rosdep vs. colcon</div>
+      <p><strong>apt</strong> installs system packages. <strong>pip</strong> installs Python packages. <strong>rosdep</strong> doesn't install anything itself — it reads each package's <code>package.xml</code> and figures out which <code>apt</code>/<code>pip</code> commands to run to satisfy its dependencies. <strong>colcon</strong> builds your workspace's source packages, it does not manage dependencies at all.</p>
+    </div>
+    <pre><code>sudo rosdep init
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y</code></pre>
+  </section>
+
+  <section id="first-pkg">
+    <h2><span class="num">B.13</span>Creating your first package</h2>
+    <pre><code># Python package
+ros2 pkg create --build-type ament_python my_robot_pkg
+
+# C++ package
+ros2 pkg create --build-type ament_cmake my_robot_cpp</code></pre>
+    <p><code>ament_python</code> packages are built with <code>setup.py</code>/<code>setup.cfg</code> and pure Python; <code>ament_cmake</code> packages use <code>CMakeLists.txt</code> and compile C++ sources. A package can also mix both when it needs C++ performance-critical nodes alongside Python tooling.</p>
+  </section>
+
+  <section id="middleware">
+    <h2><span class="num">B.14</span>DDS, RMW, ROS_DOMAIN_ID, and QoS</h2>
+    <pre><code>ROS 2 API
+    │
+rclcpp / rclpy
+    │
+   rcl
+    │
+   RMW  (ROS middleware interface)
+    │
+DDS implementation (Fast DDS / Cyclone DDS / Zenoh / ...)
+    │
+ Network</code></pre>
+    <p>The RMW layer lets ROS 2 swap DDS/middleware implementations without changing application code. Check the active one with:</p>
+    <pre><code>echo $RMW_IMPLEMENTATION</code></pre>
+    <p>
+      Only change the middleware implementation for a concrete engineering reason — e.g. Zenoh for constrained or
+      lossy links, or a specific vendor's Connext for a certified deployment — never as a default habit.
+    </p>
+    <pre><code>export ROS_DOMAIN_ID=10</code></pre>
+    <pre><code>Robot A, ROS_DOMAIN_ID=10 ─┐
+                            ├─ can discover each other
+Robot B, ROS_DOMAIN_ID=10 ─┘
+
+Robot C, ROS_DOMAIN_ID=20  ─ isolated</code></pre>
+    <div class="box mistake">
+      <div class="box-title">⚠️ Domain ID is not security</div>
+      <p><code>ROS_DOMAIN_ID</code> only partitions discovery on a shared network. It provides no authentication or encryption — anyone on the same physical/logical network segment and domain can see and inject traffic. Real security requires DDS Security (authentication, access control, encryption) explicitly configured.</p>
+    </div>
+    <p>QoS (Quality of Service) exists because one policy doesn't fit every topic:</p>
+    <ul>
+      <li><strong>Camera stream / LiDAR</strong> — best-effort, small history depth: dropping an old frame is fine, latency matters more than guaranteed delivery.</li>
+      <li><strong>Motor command / emergency stop</strong> — reliable, low latency: dropped commands are unacceptable.</li>
+      <li><strong>Map</strong> — reliable, transient-local durability: a late-joining node should still receive the last published map.</li>
+    </ul>
+  </section>
+
+  <section id="debugging">
+    <h2><span class="num">B.15</span>Debugging the ROS graph and rosbag2</h2>
+    <p>Practical workflow for "the motors aren't moving":</p>
+    <pre><code>1. Is the navigation node alive?      → ros2 node list
+2. Does /cmd_vel exist?               → ros2 topic list
+3. Is /cmd_vel actually publishing?   → ros2 topic hz /cmd_vel
+4. What does it contain?              → ros2 topic echo /cmd_vel
+5. Is the controller subscribed?      → ros2 topic info /cmd_vel
+6. Are message types compatible?      → ros2 topic info /cmd_vel --verbose
+7. Are QoS profiles compatible?       → ros2 topic info /cmd_vel --verbose</code></pre>
+    <p>Record and replay real robot data for offline debugging:</p>
+    <pre><code>ros2 bag record /scan /odom /cmd_vel
+ros2 bag play my_bag
+ros2 bag info my_bag</code></pre>
+  </section>
+
+  <section id="ecosystem">
+    <h2><span class="num">B.16</span>Nav2, ros2_control, Gazebo, and MoveIt 2 on Lyrical</h2>
+    <pre><code>Sensors → Localization → Global Planner → Local Planner/Controller → /cmd_vel → Robot</code></pre>
+    <p><strong>Nav2</strong> and <strong>ros2_control</strong> are both released per-distro alongside ROS 2 core and follow the same Ubuntu/ROS pairing — install them as <code>ros-lyrical-navigation2</code> and <code>ros-lyrical-ros2-control</code> once your apt source is configured.</p>
+    <pre><code>Controller Manager
+      │
+      ├── Joint State Broadcaster
+      ├── Diff Drive Controller
+      └── Other Controllers
+              │
+              ▼
+       Hardware Interface
+              │
+              ▼
+        Motor Drivers</code></pre>
+    <p><strong>Gazebo</strong> pairing follows the table in section B.5: Lyrical is packaged against <strong>Gazebo Jetty</strong>. Do not follow Gazebo Classic tutorials (<code>gazebo_ros_pkgs</code>) on Lyrical — that lineage is discontinued; the current integration path is the <code>ros_gz</code> bridge packages.</p>
+    <pre><code>Robot Arm → MoveIt 2 → Motion Planning → ros2_control → Joint Controllers</code></pre>
+    <p>You need MoveIt 2 when you're planning collision-aware motion for a manipulator; you don't need it for a mobile base that only needs Nav2's 2D planning.</p>
+  </section>
+
+  <section id="migration">
+    <h2><span class="num">B.17</span>Migrating from Humble, Jazzy, or Kilted</h2>
+    <div class="box def">
+      <div class="box-title">📖 Keep these categories separate</div>
+      <p><strong>Breaking change</strong> — old code stops compiling or running. <strong>Deprecation</strong> — old code still works but warns, and will break in a future release. <strong>Behavioral change</strong> — same API, different runtime behavior. <strong>New capability</strong> — nothing to migrate, purely additive.</p>
+    </div>
+    <p>Before moving a package from an older distro to Lyrical:</p>
+    <ul>
+      <li>Re-run <code>rosdep install</code> against the new Ubuntu base — package names and available versions shift with each Ubuntu LTS.</li>
+      <li>Rebuild against Lyrical's toolchain rather than assuming an older binary will link — ABI compatibility across distros is not guaranteed.</li>
+      <li>Check your package's upstream repository for a distro-specific branch or release (e.g. a <code>jazzy</code> vs. a <code>lyrical</code> branch) — many community packages maintain these separately.</li>
+      <li>Re-test Gazebo/Nav2/ros2_control launch files — plugin names and default parameters can change between the Gazebo releases each distro pairs with.</li>
+      <li>Read the "Migration" page under <code>docs.ros.org/en/lyrical/Releases</code> for the authoritative list — this appendix is a map, not a replacement for it.</li>
+    </ul>
+    <div class="box mistake">
+      <div class="box-title">⚠️ A package working on Humble does not imply it works unchanged on Lyrical</div>
+      <p>Four years and several Ubuntu LTS releases separate them. API evolution, dependency version drift, compiler changes, and whether the maintainer even still builds for the new distro all affect this — always check package compatibility before committing to a distro for a new project.</p>
+    </div>
+  </section>
+
+  <section id="deploy">
+    <h2><span class="num">B.18</span>Jetson, Raspberry Pi, and Docker</h2>
+    <p>
+      <strong>NVIDIA Jetson</strong> boards ship a specific JetPack/Ubuntu/CUDA combination determined by NVIDIA,
+      which is frequently a version or more behind the newest desktop Ubuntu LTS. Before targeting Lyrical (Ubuntu
+      26.04) on Jetson hardware, verify NVIDIA's current JetPack base OS — if it hasn't caught up yet, your
+      practical choices are a containerized ROS 2 install (a Lyrical container on an older JetPack host OS), a
+      source build, or staying on the ROS distro that matches your JetPack's actual Ubuntu base.
+    </p>
+    <pre><code>Native supported install   → JetPack's Ubuntu base matches a released ROS distro
+Containerized ROS          → run a newer distro's container on an older host OS
+Source build               → build ROS 2 from source against your exact JetPack image
+Unsupported workaround     → forcing package installs across mismatched versions</code></pre>
+    <p><strong>Raspberry Pi</strong> (4/5) with a 64-bit Ubuntu Server or Desktop image gets Tier 1/Tier 3 ARM64 binaries depending on the distro — prefer 64-bit over 32-bit for any current ROS 2 work, since 32-bit support has been dropped across the ecosystem.</p>
+    <pre><code>Ubuntu Host
+│
+├── ROS Container
+│    ├── Nav2
+│    ├── Perception
+│    └── Application nodes
+│
+└── Hardware / drivers</code></pre>
+    <p>Docker gives reproducible dependency isolation and easy deployment, at the cost of extra complexity around DDS discovery across container network boundaries and GPU passthrough for perception workloads.</p>
+  </section>
+
+  <section id="choosing">
+    <h2><span class="num">B.19</span>How to choose a ROS 2 distribution</h2>
+    <pre><code>Starting a new robot?
+        │
+        ▼
+Need long-term production support?
+        │
+        ├── Yes → newest LTS compatible with your hardware/OS/driver stack
+        │
+        └── No
+             │
+             ▼
+     Need newest ROS capabilities?
+             │
+             ├── Stable non-LTS release for early access with real support
+             └── Rolling only if you're a maintainer or doing pure research</code></pre>
+    <table>
+      <tr><th>Scenario</th><th>Preferred strategy</th><th>Reason</th></tr>
+      <tr><td>Learning ROS 2 today</td><td>Current supported LTS (Lyrical, or Jazzy)</td><td>Best documentation coverage and longevity</td></tr>
+      <tr><td>New production robot</td><td>Newest LTS compatible with your sensors/Jetson/vendor SDKs</td><td>Five-year support window</td></tr>
+      <tr><td>Existing Ubuntu 22.04 fleet</td><td>Stay on Humble until a real reason to move</td><td>Re-validation cost of an OS jump is high</td></tr>
+      <tr><td>Research on newest APIs</td><td>Latest stable, Rolling only for direct package contribution</td><td>New capabilities without maintainer-only instability</td></tr>
+      <tr><td>Package maintainer</td><td>Target Rolling + the active LTS distros</td><td>Forward and backward compatibility</td></tr>
+    </table>
+    <div class="box eng">
+      <div class="box-title">🔧 Engineering decision</div>
+      <p>
+        Don't choose a ROS distribution by release date alone. First check your OS, GPU/AI stack (JetPack, CUDA),
+        sensor and LiDAR driver support, Gazebo pairing, Nav2/ros2_control/MoveIt 2 availability, vendor SDKs, and
+        your fleet's real maintenance lifecycle. "Newest ROS" and "best ROS for this robot" are frequently
+        different answers.
+      </p>
+    </div>
+  </section>
+
+  <section id="mistakes">
+    <h2><span class="num">B.20</span>Common mistakes and a cheat sheet</h2>
+    <div class="table-scroll">
+    <table>
+      <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+      <tr><td><code>ros2: command not found</code></td><td>Forgot to source ROS</td><td><code>source /opt/ros/lyrical/setup.bash</code></td></tr>
+      <tr><td>Package not found after build</td><td>Forgot to source the workspace overlay</td><td><code>source install/setup.bash</code></td></tr>
+      <tr><td>apt can't find <code>ros-lyrical-*</code> packages</td><td>Mixed distro name in package name, or wrong Ubuntu version</td><td>Match the package prefix to your actual installed <code>ROS_DISTRO</code></td></tr>
+      <tr><td>Two nodes with the same name conflict</td><td>Duplicate node names on the graph</td><td>Rename or namespace one of them</td></tr>
+      <tr><td>Robots on the same LAN can't see each other</td><td>Different <code>ROS_DOMAIN_ID</code></td><td>Align the domain ID, or intentionally isolate it</td></tr>
+      <tr><td>Nodes see each other but topics won't connect</td><td>Incompatible QoS profiles</td><td>Check <code>ros2 topic info --verbose</code> and align reliability/durability</td></tr>
+      <tr><td>Following an old blog post breaks the build</td><td>Blog was written for ROS 1, Foxy, Humble, or Gazebo Classic</td><td>Cross-check every command against <code>docs.ros.org/en/lyrical</code></td></tr>
+    </table>
+    </div>
+    <h3>Cheat sheet</h3>
+    <pre><code># Environment
+source /opt/ros/lyrical/setup.bash
+printenv | grep ROS
+
+# Nodes / Topics / Services / Actions
+ros2 node list
+ros2 topic list  |  echo  |  info  |  hz
+ros2 service list  |  call
+ros2 action list  |  send_goal
+
+# Parameters
+ros2 param list  |  get  |  set
+
+# Packages & build
+ros2 pkg create --build-type ament_python <name>
+colcon build --symlink-install
+source install/setup.bash
+
+# Dependencies
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+
+# Diagnostics & recording
+ros2 doctor
+ros2 bag record / play / info</code></pre>
+  </section>
+
+  <section id="glossary">
+    <h2><span class="num">📖</span>Glossary</h2>
+    <dl class="glossary">
+      <dt>Distribution / distro</dt><dd>A versioned, tested set of compatible ROS 2 packages tied to a specific OS/toolchain.</dd>
+      <dt>LTS</dt><dd>Long Term Support — roughly five years of patches, versus about eighteen months for a non-LTS release.</dd>
+      <dt>Rolling Ridley</dt><dd>The continuously updated development line every future stable distro branches from.</dd>
+      <dt>RMW</dt><dd>ROS Middleware interface — the abstraction layer that lets ROS 2 swap DDS implementations.</dd>
+      <dt>DDS</dt><dd>Data Distribution Service — the pub/sub networking standard ROS 2's default transport is built on.</dd>
+      <dt>QoS</dt><dd>Quality of Service — per-topic policies (reliability, durability, history) tuned to what that data actually needs.</dd>
+      <dt>Overlay / underlay</dt><dd>Underlay = the base ROS install; overlay = your workspace, sourced on top of it.</dd>
+      <dt>Tier 1/2/3 support</dt><dd>Open Robotics' guarantee levels for a given OS/architecture combination, from fully tested down to best-effort.</dd>
+    </dl>
+  </section>
+
+  <div class="footer-nav">
+    <div>Appendix B of "ROS 2: Zero to Robot"</div>
+    <div>Related to Chapter 1 (Architecture) and Chapter 2 (Development Environment)</div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#f1efe8',
+      primaryColor: '#e7f0fe',
+      primaryTextColor: '#211f1a',
+      primaryBorderColor: '#2f7de8',
+      lineColor: '#0f9d78',
+      secondaryColor: '#e7f0fe',
+      tertiaryColor: '#f1efe8',
+      fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    flowchart: { curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-toggle-icon');
+  function updateIcon(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    icon.textContent = isDark ? '☀️' : '🌙';
+  }
+  updateIcon();
+  btn.addEventListener('click', function(){
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('ros2-book-theme', next); }catch(e){}
+    updateIcon();
+  });
+})();
+</script>
+</body>
+</html>
